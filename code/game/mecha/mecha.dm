@@ -130,7 +130,7 @@
 			internal_tank.forceMove(WR)
 	else
 		for(var/obj/item/mecha_parts/mecha_equipment/E in equipment)
-			E.detach(loc)
+			detach(E, loc)
 			E.destroy()
 		if(cell)
 			qdel(cell)
@@ -712,6 +712,18 @@
 		selected = E
 	E.attached(src)
 
+/obj/mecha/proc/detach(var/obj/item/mecha_parts/mecha_equipment/E, atom/moveto=null)
+	if( !E || !(E in equipment) )
+		return
+	moveto = moveto || get_turf(src)
+	if(E.Move(moveto))
+		equipment -= E
+		if(selected == E)
+			selected = null
+		log_message("[E] removed from equipment.")
+		E.detached()
+	return
+
 /obj/mecha/attackby(obj/item/weapon/W as obj, mob/user as mob)
 	if(istype(W, /obj/item/mecha_parts/mecha_equipment))
 		if(can_attach(W, user))
@@ -1287,7 +1299,7 @@
 						<div class='header'>Equipment</div>
 						<div class='links'>"}
 		for(var/obj/item/mecha_parts/mecha_equipment/W in equipment)
-			output += "[W.name] <a href='?src=\ref[W];detach=1'>Detach</a><br>"
+			output += "[W.name] <a href='?src=\ref[src];detach=\ref[W]'>Detach</a><br>"
 		output += "<b>Available equipment slots:</b> [max_equip-equipment.len]"
 		output += "</div></div>"
 	return output
@@ -1410,6 +1422,9 @@
 			src.visible_message("[src] raises [equip]")
 			send_byjax(src.occupant,"exosuit.browser","eq_list",src.get_equipment_list())
 		return
+	if(href_list["detach"])
+		var/obj/item/mecha_parts/mecha_equipment/E = locate(href_list["detach"])
+		detach(E)
 	if(href_list["eject"])
 		if(usr != src.occupant)	return
 		playsound(src,'sound/mecha/ROBOTIC_Servo_Large_Dual_Servos_Open_mono.wav',100,1)
