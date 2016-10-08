@@ -69,11 +69,10 @@
 	if(next_move > world.time) // in the year 2000...
 		return
 
-	if(istype(loc,/obj/mecha))
-		if(!locate(/turf) in list(A,A.loc)) // Prevents inventory from being drilled
-			return
-		var/obj/mecha/M = loc
-		return M.click_action(A,src)
+	if(istype(loc,/obj/mecha_cabin))
+		if(locate(/turf) in list(A,A.loc)) // Prevents inventory from being drilled
+			var/obj/mecha_cabin/M = loc
+			return M.click_action(A,src)
 
 	if(restrained())
 		RestrainedClickOn(A)
@@ -99,7 +98,6 @@
 			update_inv_l_hand(0)
 		else
 			update_inv_r_hand(0)
-
 		return
 
 	// operate two STORAGE levels deep here (item in backpack in src; NOT item in box in backpack in src)
