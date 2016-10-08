@@ -181,7 +181,10 @@
 	cabin_air = new
 	cabin_air.temperature = T20C
 	cabin_air.volume = 200
-	cabin_air.adjust_multi("oxygen", O2STANDARD*cabin_air.volume/(R_IDEAL_GAS_EQUATION*cabin_air.temperature), "nitrogen", N2STANDARD*cabin_air.volume/(R_IDEAL_GAS_EQUATION*cabin_air.temperature))
+	cabin_air.adjust_multi(
+		"oxygen",   O2STANDARD*cabin_air.volume/(R_IDEAL_GAS_EQUATION*cabin_air.temperature),
+		"nitrogen", N2STANDARD*cabin_air.volume/(R_IDEAL_GAS_EQUATION*cabin_air.temperature)
+	)
 	return cabin_air
 
 /obj/mecha/proc/add_radio()
@@ -218,7 +221,11 @@
 
 
 /obj/mecha/proc/check_for_support()
-	if(locate(/obj/structure/grille, range(1, src)) || locate(/obj/structure/lattice, range(1, src)) || locate(/turf/simulated, range(1, src)) || locate(/turf/unsimulated, range(1, src)))
+	if( locate(/obj/structure/grille, range(1, src))  || \
+		locate(/obj/structure/lattice, range(1, src)) || \
+		locate(/turf/simulated, range(1, src)) || \
+		locate(/turf/unsimulated, range(1, src))
+	)
 		return 1
 	else
 		return 0
@@ -261,28 +268,6 @@
 ////////////////////////////
 ///// Action processing ////
 ////////////////////////////
-/*
-/atom/DblClick(object,location,control,params)
-	var/mob/M = src.mob
-	if(M && M.in_contents_of(/obj/mecha))
-
-		if(mech_click == world.time) return
-		mech_click = world.time
-
-		if(!istype(object, /atom)) return
-		if(istype(object, /obj/screen))
-			var/obj/screen/using = object
-			if(using.screen_loc == ui_acti || using.screen_loc == ui_iarrowleft || using.screen_loc == ui_iarrowright)//ignore all HUD objects save 'intent' and its arrows
-				return ..()
-			else
-				return
-		var/obj/mecha/Mech = M.loc
-		spawn() //this helps prevent clickspam fest.
-			if (Mech)
-				Mech.click_action(object,M)
-//	else
-//		return ..()
-*/
 
 /obj/mecha/proc/click_action(atom/target,mob/user)
 	if(!src.occupant || src.occupant != user ) return
@@ -323,7 +308,8 @@
 	return 0
 
 /obj/mecha/contents_nano_distance(var/src_object, var/mob/living/user)
-	. = user.shared_living_nano_distance(src_object) //allow them to interact with anything they can interact with normally.
+	//allow them to interact with anything they can interact with normally.
+	. = user.shared_living_nano_distance(src_object)
 	if(. != STATUS_INTERACTIVE)
 		//Allow interaction with the mecha or anything that is part of the mecha
 		if(src_object == src || (src_object in src))
@@ -333,7 +319,8 @@
 			src.log_message("Interfaced with [src_object].")
 			return STATUS_INTERACTIVE
 		if(src_object in view(2, src))
-			return STATUS_UPDATE //if they're close enough, allow the occupant to see the screen through the viewport or whatever.
+			//if they're close enough, allow the occupant to see the screen through the viewport or whatever.
+			return STATUS_UPDATE
 
 /obj/mecha/proc/melee_action(atom/target)
 	return
@@ -532,15 +519,24 @@
 				src.occupant_message("\blue The [user]'s claws are stopped by the armor.")
 				visible_message("\blue The [user] rebounds off [src.name]'s armor!")
 		else
-			user.visible_message("<font color='red'><b>[user] hits [src.name]. Nothing happens</b></font>","<font color='red'><b>You hit [src.name] with no visible effect.</b></font>")
+			user.visible_message(
+				"<font color='red'><b>[user] hits [src.name]. Nothing happens</b></font>",
+				"<font color='red'><b>You hit [src.name] with no visible effect.</b></font>"
+			)
 			src.log_append_to_last("Armor saved.")
 		return
 	else if ((HULK in user.mutations) && !prob(src.deflect_chance))
 		src.take_damage(15)
 		src.check_for_internal_damage(list(MECHA_INT_TEMP_CONTROL,MECHA_INT_TANK_BREACH,MECHA_INT_CONTROL_LOST))
-		user.visible_message("<font color='red'><b>[user] hits [src.name], doing some damage.</b></font>", "<font color='red'><b>You hit [src.name] with all your might. The metal creaks and bends.</b></font>")
+		user.visible_message(
+			"<font color='red'><b>[user] hits [src.name], doing some damage.</b></font>",
+			"<font color='red'><b>You hit [src.name] with all your might. The metal creaks and bends.</b></font>"
+		)
 	else
-		user.visible_message("<font color='red'><b>[user] hits [src.name]. Nothing happens</b></font>","<font color='red'><b>You hit [src.name] with no visible effect.</b></font>")
+		user.visible_message(
+			"<font color='red'><b>[user] hits [src.name]. Nothing happens</b></font>",
+			"<font color='red'><b>You hit [src.name] with no visible effect.</b></font>"
+		)
 		src.log_append_to_last("Armor saved.")
 	return
 
@@ -688,7 +684,10 @@
 */
 	else
 		src.occupant_message("<font color='red'><b>[user] hits [src] with [W].</b></font>")
-		user.visible_message("<font color='red'><b>[user] hits [src] with [W].</b></font>", "<font color='red'><b>You hit [src] with [W].</b></font>")
+		user.visible_message(
+			"<font color='red'><b>[user] hits [src] with [W].</b></font>",
+			"<font color='red'><b>You hit [src] with [W].</b></font>"
+		)
 		src.take_damage(W.force,W.damtype)
 		src.check_for_internal_damage(list(MECHA_INT_TEMP_CONTROL,MECHA_INT_TANK_BREACH,MECHA_INT_CONTROL_LOST))
 	return
@@ -697,17 +696,28 @@
 ////// AttackBy //////
 //////////////////////
 
-/obj/mecha/attackby(obj/item/weapon/W as obj, mob/user as mob)
+/obj/mecha/proc/can_attach(var/obj/item/mecha_parts/mecha_equipment/E, mob/living/user)
+	if(!istype(E) || (equipment.len >= max_equip))
+		return 0
+	return E.can_attach(src)
 
+/obj/mecha/proc/attach(var/obj/item/mecha_parts/mecha_equipment/E, mob/living/user)
+	if(user)
+		user.drop_from_inventory(E, src)
+		user.visible_message("[user] attaches [E] to [src]", "You attach [E] to [src]")
+	E.forceMove(src)
+	equipment += E
+	log_message("[E] initialized.")
+	if(!selected)
+		selected = E
+	E.attached(src)
+
+/obj/mecha/attackby(obj/item/weapon/W as obj, mob/user as mob)
 	if(istype(W, /obj/item/mecha_parts/mecha_equipment))
-		var/obj/item/mecha_parts/mecha_equipment/E = W
-		spawn()
-			if(E.can_attach(src))
-				user.drop_item()
-				E.attach(src)
-				user.visible_message("[user] attaches [W] to [src]", "You attach [W] to [src]")
-			else
-				user << "You were unable to attach [W] to [src]"
+		if(can_attach(W, user))
+			attach(W, user)
+		else
+			user << "You were unable to attach [W] to [src]"
 		return
 	if(istype(W, /obj/item/weapon/card/id)||istype(W, /obj/item/device/pda))
 		if(add_req_access || maint_access)
@@ -811,22 +821,6 @@
 
 	else
 		call((proc_res["dynattackby"]||src), "dynattackby")(W,user)
-/*
-		src.log_message("Attacked by [W]. Attacker - [user]")
-		if(prob(src.deflect_chance))
-			user << "\red The [W] bounces off [src.name] armor."
-			src.log_append_to_last("Armor saved.")
-/*
-			for (var/mob/V in viewers(src))
-				if(V.client && !(V.blinded))
-					V.show_message("The [W] bounces off [src.name] armor.", 1)
-*/
-		else
-			src.occupant_message("<font color='red'><b>[user] hits [src] with [W].</b></font>")
-			user.visible_message("<font color='red'><b>[user] hits [src] with [W].</b></font>", "<font color='red'><b>You hit [src] with [W].</b></font>")
-			src.take_damage(W.force,W.damtype)
-			src.check_for_internal_damage(list(MECHA_INT_TEMP_CONTROL,MECHA_INT_TANK_BREACH,MECHA_INT_CONTROL_LOST))
-*/
 	return
 
 
@@ -932,7 +926,6 @@
 	set category = "Exosuit Interface"
 	set src = usr.loc
 	set popup_menu = 0
-	if(!src.occupant) return
 	if(usr!=src.occupant)
 		return
 	var/obj/machinery/atmospherics/portables_connector/possible_port = locate(/obj/machinery/atmospherics/portables_connector/) in loc
@@ -1105,34 +1098,8 @@
 	else
 		return
 	if(mob_container.forceMove(src.loc))//ejecting mob container
-	/*
-		if(ishuman(occupant) && (return_pressure() > HAZARD_HIGH_PRESSURE))
-			use_internal_tank = 0
-			var/datum/gas_mixture/environment = get_turf_air()
-			if(environment)
-				var/env_pressure = environment.return_pressure()
-				var/pressure_delta = (cabin.return_pressure() - env_pressure)
-		//Can not have a pressure delta that would cause environment pressure > tank pressure
-
-				var/transfer_moles = 0
-				if(pressure_delta > 0)
-					transfer_moles = pressure_delta*environment.volume/(cabin.return_temperature() * R_IDEAL_GAS_EQUATION)
-
-			//Actually transfer the gas
-					var/datum/gas_mixture/removed = cabin.air_contents.remove(transfer_moles)
-					loc.assume_air(removed)
-
-			occupant.SetStunned(5)
-			occupant.SetWeakened(5)
-			occupant << "You were blown out of the mech!"
-	*/
 		src.log_message("[mob_container] moved out.")
 		occupant.reset_view()
-		/*
-		if(src.occupant.client)
-			src.occupant.client.eye = src.occupant.client.mob
-			src.occupant.client.perspective = MOB_PERSPECTIVE
-		*/
 		src.occupant << browse(null, "window=exosuit")
 		if(istype(mob_container, /obj/item/device/mmi))
 			var/obj/item/device/mmi/mmi = mob_container
@@ -1190,60 +1157,56 @@
 ////////////////////////////////////
 
 /obj/mecha/proc/get_stats_html()
-	var/output = {"<html>
-						<head><title>[src.name] data</title>
-						<style>
-						body {color: #00ff00; background: #000000; font-family:"Lucida Console",monospace; font-size: 12px;}
-						hr {border: 1px solid #0f0; color: #0f0; background-color: #0f0;}
-						a {padding:2px 5px;;color:#0f0;}
-						.wr {margin-bottom: 5px;}
-						.header {cursor:pointer;}
-						.open, .closed {background: #32CD32; color:#000; padding:1px 2px;}
-						.links a {margin-bottom: 2px;padding-top:3px;}
-						.visible {display: block;}
-						.hidden {display: none;}
-						</style>
-						<script language='javascript' type='text/javascript'>
-						[js_byjax]
-						[js_dropdowns]
-						function ticker() {
-						    setInterval(function(){
-						        window.location='byond://?src=\ref[src]&update_content=1';
-						    }, 1000);
-						}
+	var/output = {"
+		<html>
+		<head><title>[src.name] data</title>
+		<style>
+			body {color: #00ff00; background: #000000; font-family:"Lucida Console",monospace; font-size: 12px;}
+			hr {border: 1px solid #0f0; color: #0f0; background-color: #0f0;}
+			a {padding:2px 5px;;color:#0f0;}
+			.wr {margin-bottom: 5px;}
+			.header {cursor:pointer;}
+			.open, .closed {background: #32CD32; color:#000; padding:1px 2px;}
+			.links a {margin-bottom: 2px;padding-top:3px;}
+			.visible {display: block;}
+			.hidden {display: none;}
+		</style>
+		<script language='javascript' type='text/javascript'>
+			[js_byjax]
+			[js_dropdowns]
+			function ticker() {
+			    setInterval(function(){
+			        window.location='byond://?src=\ref[src]&update_content=1';
+			    }, 1000);
+			}
 
-						window.onload = function() {
-							dropdowns();
-							ticker();
-						}
-						</script>
-						</head>
-						<body>
-						<div id='content'>
-						[src.get_stats_part()]
-						</div>
-						<div id='eq_list'>
-						[src.get_equipment_list()]
-						</div>
-						<hr>
-						<div id='commands'>
-						[src.get_commands()]
-						</div>
-						</body>
-						</html>
-					 "}
+			window.onload = function() {
+				dropdowns();
+				ticker();
+			}
+		</script>
+		</head>
+		<body>
+			<div id='content'>[src.get_stats_part()]</div>
+			<div id='eq_list'>[src.get_equipment_list()]</div>
+			<hr>
+			<div id='commands'>[src.get_commands()]</div>
+		</body>
+		</html>
+	 "}
 	return output
 
 
 /obj/mecha/proc/report_internal_damage()
 	var/output = null
 	var/list/dam_reports = list(
-										"[MECHA_INT_FIRE]" = "<font color='red'><b>INTERNAL FIRE</b></font>",
-										"[MECHA_INT_TEMP_CONTROL]" = "<font color='red'><b>LIFE SUPPORT SYSTEM MALFUNCTION</b></font>",
-										"[MECHA_INT_TANK_BREACH]" = "<font color='red'><b>GAS TANK BREACH</b></font>",
-										"[MECHA_INT_CONTROL_LOST]" = "<font color='red'><b>COORDINATION SYSTEM CALIBRATION FAILURE</b></font> - <a href='?src=\ref[src];repair_int_control_lost=1'>Recalibrate</a>",
-										"[MECHA_INT_SHORT_CIRCUIT]" = "<font color='red'><b>SHORT CIRCUIT</b></font>"
-										)
+		"[MECHA_INT_FIRE]" = "<font color='red'><b>INTERNAL FIRE</b></font>",
+		"[MECHA_INT_TEMP_CONTROL]" = "<font color='red'><b>LIFE SUPPORT SYSTEM MALFUNCTION</b></font>",
+		"[MECHA_INT_TANK_BREACH]" = "<font color='red'><b>GAS TANK BREACH</b></font>",
+		"[MECHA_INT_CONTROL_LOST]" = "<font color='red'><b>COORDINATION SYSTEM CALIBRATION FAILURE</b></font> - \
+									<a href='?src=\ref[src];repair_int_control_lost=1'>Recalibrate</a>",
+		"[MECHA_INT_SHORT_CIRCUIT]" = "<font color='red'><b>SHORT CIRCUIT</b></font>"
+	)
 	for(var/tflag in dam_reports)
 		var/intdamflag = text2num(tflag)
 		if(hasInternalDamage(intdamflag))
@@ -1260,58 +1223,61 @@
 	var/tank_pressure = internal_tank ? round(internal_tank.return_pressure(),0.01) : "None"
 	var/tank_temperature = internal_tank ? internal_tank.return_temperature() : "Unknown"
 	var/cabin_pressure = round(return_pressure(),0.01)
-	var/output = {"[report_internal_damage()]
-						[integrity<30?"<font color='red'><b>DAMAGE LEVEL CRITICAL</b></font><br>":null]
-						<b>Integrity: </b> [integrity]%<br>
-						<b>Powercell charge: </b>[isnull(cell_charge)?"No powercell installed":"[cell.percent()]%"]<br>
-						<b>Air source: </b>[use_internal_tank?"Internal Airtank":"Environment"]<br>
-						<b>Airtank pressure: </b>[tank_pressure]kPa<br>
-						<b>Airtank temperature: </b>[tank_temperature]K|[tank_temperature - T0C]&deg;C<br>
-						<b>Cabin pressure: </b>[cabin_pressure>WARNING_HIGH_PRESSURE ? "<font color='red'>[cabin_pressure]</font>": cabin_pressure]kPa<br>
-						<b>Cabin temperature: </b> [return_temperature()]K|[return_temperature() - T0C]&deg;C<br>
-						<b>Lights: </b>[lights?"on":"off"]<br>
-						[src.dna?"<b>DNA-locked:</b><br> <span style='font-size:10px;letter-spacing:-1px;'>[src.dna]</span> \[<a href='?src=\ref[src];reset_dna=1'>Reset</a>\]<br>":null]
-					"}
+	var/output = {"
+		[report_internal_damage()]
+		[integrity<30?"<font color='red'><b>DAMAGE LEVEL CRITICAL</b></font><br>":null]
+		<b>Integrity: </b> [integrity]%<br>
+		<b>Powercell charge: </b>[isnull(cell_charge)?"No powercell installed":"[cell.percent()]%"]<br>
+		<b>Air source: </b>[use_internal_tank?"Internal Airtank":"Environment"]<br>
+		<b>Airtank pressure: </b>[tank_pressure]kPa<br>
+		<b>Airtank temperature: </b>[tank_temperature]K|[tank_temperature - T0C]&deg;C<br>
+		<b>Cabin pressure: </b>[cabin_pressure>WARNING_HIGH_PRESSURE ? "<font color='red'>[cabin_pressure]</font>": cabin_pressure]kPa<br>
+		<b>Cabin temperature: </b> [return_temperature()]K|[return_temperature() - T0C]&deg;C<br>
+		<b>Lights: </b>[lights?"on":"off"]<br>
+		[src.dna?"<b>DNA-locked:</b><br> \
+		<span style='font-size:10px;letter-spacing:-1px;'>[src.dna]</span> \[<a href='?src=\ref[src];reset_dna=1'>Reset</a>\]<br>":null]
+	"}
 	return output
 
 /obj/mecha/proc/get_commands()
-	var/output = {"<div class='wr'>
-						<div class='header'>Electronics</div>
-						<div class='links'>
-						<a href='?src=\ref[src];toggle_lights=1'>Toggle Lights</a><br>
-						<b>Radio settings:</b><br>
-						Microphone: <a href='?src=\ref[src];rmictoggle=1'><span id="rmicstate">[radio.broadcasting?"Engaged":"Disengaged"]</span></a><br>
-						Speaker: <a href='?src=\ref[src];rspktoggle=1'><span id="rspkstate">[radio.listening?"Engaged":"Disengaged"]</span></a><br>
-						Frequency:
-						<a href='?src=\ref[src];rfreq=-10'>-</a>
-						<a href='?src=\ref[src];rfreq=-2'>-</a>
-						<span id="rfreq">[format_frequency(radio.frequency)]</span>
-						<a href='?src=\ref[src];rfreq=2'>+</a>
-						<a href='?src=\ref[src];rfreq=10'>+</a><br>
-						</div>
-						</div>
-						<div class='wr'>
-						<div class='header'>Airtank</div>
-						<div class='links'>
-						<a href='?src=\ref[src];toggle_airtank=1'>Toggle Internal Airtank Usage</a><br>
-						[(/obj/mecha/verb/disconnect_from_port in src.verbs)?"<a href='?src=\ref[src];port_disconnect=1'>Disconnect from port</a><br>":null]
-						[(/obj/mecha/verb/connect_to_port in src.verbs)?"<a href='?src=\ref[src];port_connect=1'>Connect to port</a><br>":null]
-						</div>
-						</div>
-						<div class='wr'>
-						<div class='header'>Permissions & Logging</div>
-						<div class='links'>
-						<a href='?src=\ref[src];toggle_id_upload=1'><span id='t_id_upload'>[add_req_access?"L":"Unl"]ock ID upload panel</span></a><br>
-						<a href='?src=\ref[src];toggle_maint_access=1'><span id='t_maint_access'>[maint_access?"Forbid":"Permit"] maintenance protocols</span></a><br>
-						<a href='?src=\ref[src];dna_lock=1'>DNA-lock</a><br>
-						<a href='?src=\ref[src];view_log=1'>View internal log</a><br>
-						<a href='?src=\ref[src];change_name=1'>Change exosuit name</a><br>
-						</div>
-						</div>
-						<div id='equipment_menu'>[get_equipment_menu()]</div>
-						<hr>
-						[(/obj/mecha/verb/eject in src.verbs)?"<a href='?src=\ref[src];eject=1'>Eject</a><br>":null]
-						"}
+	var/output = {"
+		<div class='wr'>
+		<div class='header'>Electronics</div>
+		<div class='links'>
+		<a href='?src=\ref[src];toggle_lights=1'>Toggle Lights</a><br>
+		<b>Radio settings:</b><br>
+		Microphone: <a href='?src=\ref[src];rmictoggle=1'><span id="rmicstate">[radio.broadcasting?"Engaged":"Disengaged"]</span></a><br>
+		Speaker: <a href='?src=\ref[src];rspktoggle=1'><span id="rspkstate">[radio.listening?"Engaged":"Disengaged"]</span></a><br>
+		Frequency:
+		<a href='?src=\ref[src];rfreq=-10'>-</a>
+		<a href='?src=\ref[src];rfreq=-2'>-</a>
+		<span id="rfreq">[format_frequency(radio.frequency)]</span>
+		<a href='?src=\ref[src];rfreq=2'>+</a>
+		<a href='?src=\ref[src];rfreq=10'>+</a><br>
+		</div>
+		</div>
+		<div class='wr'>
+		<div class='header'>Airtank</div>
+		<div class='links'>
+		<a href='?src=\ref[src];toggle_airtank=1'>Toggle Internal Airtank Usage</a><br>
+		[(/obj/mecha/verb/disconnect_from_port in src.verbs)?"<a href='?src=\ref[src];port_disconnect=1'>Disconnect from port</a><br>":null]
+		[(/obj/mecha/verb/connect_to_port in src.verbs)?"<a href='?src=\ref[src];port_connect=1'>Connect to port</a><br>":null]
+		</div>
+		</div>
+		<div class='wr'>
+		<div class='header'>Permissions & Logging</div>
+		<div class='links'>
+		<a href='?src=\ref[src];toggle_id_upload=1'><span id='t_id_upload'>[add_req_access?"L":"Unl"]ock ID upload panel</span></a><br>
+		<a href='?src=\ref[src];toggle_maint_access=1'><span id='t_maint_access'>[maint_access?"Forbid":"Permit"] maintenance protocols</span></a><br>
+		<a href='?src=\ref[src];dna_lock=1'>DNA-lock</a><br>
+		<a href='?src=\ref[src];view_log=1'>View internal log</a><br>
+		<a href='?src=\ref[src];change_name=1'>Change exosuit name</a><br>
+		</div>
+		</div>
+		<div id='equipment_menu'>[get_equipment_menu()]</div>
+		<hr>
+		[(/obj/mecha/verb/eject in src.verbs)?"<a href='?src=\ref[src];eject=1'>Eject</a><br>":null]
+	"}
 	return output
 
 /obj/mecha/proc/get_equipment_menu() //outputs mecha html equipment menu
@@ -1349,14 +1315,14 @@
 /obj/mecha/proc/output_access_dialog(obj/item/weapon/card/id/id_card, mob/user)
 	if(!id_card || !user) return
 	var/output = {"<html>
-						<head><style>
-						h1 {font-size:15px;margin-bottom:4px;}
-						body {color: #00ff00; background: #000000; font-family:"Courier New", Courier, monospace; font-size: 12px;}
-						a {color:#0f0;}
-						</style>
-						</head>
-						<body>
-						<h1>Following keycodes are present in this system:</h1>"}
+		<head><style>
+		h1 {font-size:15px;margin-bottom:4px;}
+		body {color: #00ff00; background: #000000; font-family:"Courier New", Courier, monospace; font-size: 12px;}
+		a {color:#0f0;}
+		</style></head>
+		<body>
+		<h1>Following keycodes are present in this system:</h1>
+	"}
 	for(var/a in operation_req_access)
 		output += "[get_access_desc(a)] - <a href='?src=\ref[src];del_req_access=[a];user=\ref[user];id_card=\ref[id_card]'>Delete</a><br>"
 	output += "<hr><h1>Following keycodes were detected on portable device:</h1>"
@@ -1365,7 +1331,9 @@
 		var/a_name = get_access_desc(a)
 		if(!a_name) continue //there's some strange access without a name
 		output += "[a_name] - <a href='?src=\ref[src];add_req_access=[a];user=\ref[user];id_card=\ref[id_card]'>Add</a><br>"
-	output += "<hr><a href='?src=\ref[src];finish_req_access=1;user=\ref[user]'>Finish</a> <font color='red'>(Warning! The ID upload panel will be locked. It can be unlocked only through Exosuit Interface.)</font>"
+	output += {"
+		<hr><a href='?src=\ref[src];finish_req_access=1;user=\ref[user]'>Finish</a>
+		<font color='red'>(Warning! The ID upload panel will be locked. It can be unlocked only through Exosuit Interface.)</font>"}
 	output += "</body></html>"
 	user << browse(output, "window=exosuit_add_access")
 	onclose(user, "exosuit_add_access")
@@ -1378,19 +1346,18 @@
 	if (locate(/obj/item/mecha_parts/mecha_equipment/tool/passenger) in contents)
 		maint_options += "<a href='?src=\ref[src];remove_passenger=1;user=\ref[user]'>Remove Passenger</a>"
 
-	var/output = {"<html>
-						<head>
-						<style>
-						body {color: #00ff00; background: #000000; font-family:"Courier New", Courier, monospace; font-size: 12px;}
-						a {padding:2px 5px; background:#32CD32;color:#000;display:block;margin:2px;text-align:center;text-decoration:none;}
-						</style>
-						</head>
-						<body>
-						[add_req_access?"<a href='?src=\ref[src];req_access=1;id_card=\ref[id_card];user=\ref[user]'>Edit operation keycodes</a>":null]
-						[maint_access?"<a href='?src=\ref[src];maint_access=1;id_card=\ref[id_card];user=\ref[user]'>Initiate maintenance protocol</a>":null]
-						[(state>0) ? maint_options : ""]
-						</body>
-						</html>"}
+	var/output = {"
+		<html><head>
+		<style>
+		body {color: #00ff00; background: #000000; font-family:"Courier New", Courier, monospace; font-size: 12px;}
+		a {padding:2px 5px; background:#32CD32;color:#000;display:block;margin:2px;text-align:center;text-decoration:none;}
+		</style>
+		</head><body>
+		[add_req_access?"<a href='?src=\ref[src];req_access=1;id_card=\ref[id_card];user=\ref[user]'>Edit operation keycodes</a>":null]
+		[maint_access?"<a href='?src=\ref[src];maint_access=1;id_card=\ref[id_card];user=\ref[user]'>Initiate maintenance protocol</a>":null]
+		[(state>0) ? maint_options : ""]
+		</body></html>
+	"}
 	user << browse(output, "window=exosuit_maint_console")
 	onclose(user, "exosuit_maint_console")
 	return
@@ -1839,25 +1806,22 @@
 	if(!occupant) return
 	if(usr!=occupant)
 		return
-	var/output = {"<html>
-						<head>
-						</head>
-						<body>
-						<h3>Set:</h3>
-						<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_FIRE]'>MECHA_INT_FIRE</a><br />
-						<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_TEMP_CONTROL]'>MECHA_INT_TEMP_CONTROL</a><br />
-						<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_SHORT_CIRCUIT]'>MECHA_INT_SHORT_CIRCUIT</a><br />
-						<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_TANK_BREACH]'>MECHA_INT_TANK_BREACH</a><br />
-						<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_CONTROL_LOST]'>MECHA_INT_CONTROL_LOST</a><br />
-						<hr />
-						<h3>Clear:</h3>
-						<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_FIRE]'>MECHA_INT_FIRE</a><br />
-						<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_TEMP_CONTROL]'>MECHA_INT_TEMP_CONTROL</a><br />
-						<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_SHORT_CIRCUIT]'>MECHA_INT_SHORT_CIRCUIT</a><br />
-						<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_TANK_BREACH]'>MECHA_INT_TANK_BREACH</a><br />
-						<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_CONTROL_LOST]'>MECHA_INT_CONTROL_LOST</a><br />
- 					   </body>
-						</html>"}
+	var/output = {"<html><body>
+		<h3>Set:</h3>
+		<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_FIRE]'>MECHA_INT_FIRE</a><br />
+		<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_TEMP_CONTROL]'>MECHA_INT_TEMP_CONTROL</a><br />
+		<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_SHORT_CIRCUIT]'>MECHA_INT_SHORT_CIRCUIT</a><br />
+		<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_TANK_BREACH]'>MECHA_INT_TANK_BREACH</a><br />
+		<a href='?src=\ref[src];debug=1;set_i_dam=[MECHA_INT_CONTROL_LOST]'>MECHA_INT_CONTROL_LOST</a><br />
+		<hr/>
+		<h3>Clear:</h3>
+		<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_FIRE]'>MECHA_INT_FIRE</a><br />
+		<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_TEMP_CONTROL]'>MECHA_INT_TEMP_CONTROL</a><br />
+		<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_SHORT_CIRCUIT]'>MECHA_INT_SHORT_CIRCUIT</a><br />
+		<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_TANK_BREACH]'>MECHA_INT_TANK_BREACH</a><br />
+		<a href='?src=\ref[src];debug=1;clear_i_dam=[MECHA_INT_CONTROL_LOST]'>MECHA_INT_CONTROL_LOST</a><br />
+		</body></html>
+	"}
 
 	occupant << browse(output, "window=ex_debug")
 	//src.health = initial(src.health)/2.2

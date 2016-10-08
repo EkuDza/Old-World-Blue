@@ -7,7 +7,7 @@
 	var/obj/mecha/working/ripley/cargo_holder
 	required_type = /obj/mecha/working
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
 		cargo_holder = M
 		return
@@ -84,7 +84,10 @@
 			if(!target_obj.vars.Find("unacidable") || target_obj.unacidable)	return
 		set_ready_state(0)
 		chassis.use_power(energy_drain)
-		chassis.visible_message("<span class='danger'>[chassis] starts to drill [target]</span>", "<span class='warning'>You hear the drill.</span>")
+		chassis.visible_message(
+			"<span class='danger'>[chassis] starts to drill [target]</span>",
+			"<span class='warning'>You hear the drill.</span>"
+		)
 		occupant_message("<span class='danger'>You start to drill [target]</span>")
 		playsound(src,'sound/mecha/mechdrill.ogg',100,1)
 		var/T = chassis.loc
@@ -141,7 +144,10 @@
 			if(target_obj.unacidable)	return
 		set_ready_state(0)
 		chassis.use_power(energy_drain)
-		chassis.visible_message("<span class='danger'>[chassis] starts to drill [target]</span>", "<span class='warning'>You hear the drill.</span>")
+		chassis.visible_message(
+			"<span class='danger'>[chassis] starts to drill [target]</span>",
+			"<span class='warning'>You hear the drill.</span>"
+		)
 		occupant_message("<span class='danger'>You start to drill [target]</span>")
 		playsound(src,'sound/mecha/mechdrill.ogg',100,1)
 		var/T = chassis.loc
@@ -519,7 +525,7 @@
 				return 1
 		return 0
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
 		chassis.proc_res["dynattackby"] = src
 		return
@@ -542,7 +548,10 @@
 			chassis.log_append_to_last("Armor saved.")
 		else
 			chassis.occupant_message("<span class='danger'>[user] hits [chassis] with [W].</span>")
-			user.visible_message("<span class='danger'><b>[user] hits [chassis] with [W].</span>", "<span class='danger'>You hit [src] with [W].</span>")
+			user.visible_message(
+				"<span class='danger'><b>[user] hits [chassis] with [W].</span>",
+				"<span class='danger'>You hit [src] with [W].</span>"
+			)
 			chassis.take_damage(round(W.force*damage_coeff),W.damtype)
 			chassis.check_for_internal_damage(list(MECHA_INT_TEMP_CONTROL,MECHA_INT_TANK_BREACH,MECHA_INT_CONTROL_LOST))
 		set_ready_state(0)
@@ -553,7 +562,8 @@
 
 /obj/item/mecha_parts/mecha_equipment/antiproj_armor_booster
 	name = "\improper RW armor booster"
-	desc = "Ranged-weaponry armor booster. Boosts exosuit armor against ranged attacks. Completely blocks taser shots, but requires energy to operate."
+	desc = "Ranged-weaponry armor booster. Boosts exosuit armor against ranged attacks. \
+			Completely blocks taser shots, but requires energy to operate."
 	icon_state = "mecha_abooster_proj"
 	origin_tech = "materials=4"
 	equip_cooldown = 10
@@ -569,7 +579,7 @@
 				return 1
 		return 0
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
 		chassis.proc_res["dynbulletdamage"] = src
 		chassis.proc_res["dynhitby"] = src
@@ -647,9 +657,9 @@
 		pr_repair_droid = null
 		..()
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
-		droid_overlay = new(src.icon, icon_state = "repair_droid")
+		droid_overlay = new(src.icon, "repair_droid")
 		M.overlays += droid_overlay
 		return
 
@@ -666,7 +676,10 @@
 
 	get_equip_info()
 		if(!chassis) return
-		return "<span style=\"color:[equip_ready?"#0f0":"#f00"];\">*</span>&nbsp;[src.name] - <a href='?src=\ref[src];toggle_repairs=1'>[pr_repair_droid.active()?"Dea":"A"]ctivate</a>"
+		return {"
+			<span style=\"color:[equip_ready?"#0f0":"#f00"];\">*</span>&nbsp;[src.name] -
+			<a href='?src=\ref[src];toggle_repairs=1'>[pr_repair_droid.active()?"Dea":"A"]ctivate</a>
+		"}
 
 
 	Topic(href, href_list)
@@ -748,7 +761,7 @@
 		..()
 		return
 
-	attach(obj/mecha/M)
+	attached(obj/mecha/M)
 		..()
 		chassis.proc_res["dyngetcharge"] = src
 //		chassis.proc_res["dynusepower"] = src
@@ -794,7 +807,10 @@
 
 	get_equip_info()
 		if(!chassis) return
-		return "<span style=\"color:[equip_ready?"#0f0":"#f00"];\">*</span>&nbsp;[src.name] - <a href='?src=\ref[src];toggle_relay=1'>[pr_energy_relay.active()?"Dea":"A"]ctivate</a>"
+		return {"
+			<span style=\"color:[equip_ready?"#0f0":"#f00"];\">*</span>&nbsp;[src.name] -
+			<a href='?src=\ref[src];toggle_relay=1'>[pr_energy_relay.active()?"Dea":"A"]ctivate</a>
+		"}
 
 /*	proc/dynusepower(amount)
 		if(!equip_ready) //enabled
@@ -889,7 +905,10 @@
 	get_equip_info()
 		var/output = ..()
 		if(output)
-			return "[output] \[[fuel]: [round(fuel.amount*fuel.perunit,0.1)] cm<sup>3</sup>\] - <a href='?src=\ref[src];toggle=1'>[pr_mech_generator.active()?"Dea":"A"]ctivate</a>"
+			return {"
+				[output] \[[fuel]: [round(fuel.amount*fuel.perunit,0.1)] cm<sup>3</sup>\] -
+				<a href='?src=\ref[src];toggle=1'>[pr_mech_generator.active()?"Dea":"A"]ctivate</a>
+			"}
 		return
 
 	action(target)
@@ -922,7 +941,10 @@
 	attackby(weapon,mob/user)
 		var/result = load_fuel(weapon)
 		if(isnull(result))
-			user.visible_message("[user] tries to shove [weapon] into [src]. What a dumb-ass.","<span class='warning'>[fuel] traces minimal. [weapon] cannot be used as fuel.</span>")
+			user.visible_message(
+				"[user] tries to shove [weapon] into [src]. What a dumb-ass.",
+				"<span class='warning'>[fuel] traces minimal. [weapon] cannot be used as fuel.</span>"
+			)
 		else if(!result)
 			user << "Unit is full."
 		else
@@ -1023,7 +1045,7 @@
 	var/obj/mecha/working/ripley/cargo_holder
 	required_type = /obj/mecha/working/ripley
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
 		cargo_holder = M
 		return
@@ -1139,7 +1161,7 @@
 	occupant = null
 	return
 
-/obj/item/mecha_parts/mecha_equipment/tool/passenger/attach()
+/obj/item/mecha_parts/mecha_equipment/tool/passenger/attached()
 	..()
 	if (chassis)
 		chassis.verbs |= /obj/mecha/proc/move_inside_passenger
@@ -1241,7 +1263,7 @@
 		chassis.proc_res["dyndomove"] = null
 		return
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
 		if(!ion_trail)
 			ion_trail = new

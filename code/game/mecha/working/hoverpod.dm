@@ -21,6 +21,10 @@
 	ion_trail.set_up(src)
 	ion_trail.start()
 
+obj/mecha/working/hoverpod/cargo/New()
+	attach(new /obj/item/mecha_parts/mecha_equipment/tool/hydraulic_clamp)
+	attach(new /obj/item/mecha_parts/mecha_equipment/tool/passenger)
+
 //Modified phazon code
 /obj/mecha/working/hoverpod/Topic(href, href_list)
 	..()

@@ -8,8 +8,11 @@
 
 /obj/mecha_cabin/New(var/atom/new_loc)
 	..()
-	if(istype(new_loc, /obj/mecha)
+	if(istype(new_loc, /obj/mecha))
 		chasis = new_loc
+
+/obj/mecha_cabin/proc/click_action(var/atom/A, var/mob/living/user)
+	chasis.click_action(A,user)
 
 /obj/mecha_cabin/relaymove(mob/user,direction)
 	if(pass_move && chasis)

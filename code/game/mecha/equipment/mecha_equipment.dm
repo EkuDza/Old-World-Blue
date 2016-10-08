@@ -1,4 +1,3 @@
-//TODO: Add critfail checks and reliability
 //DO NOT ADD MECHA PARTS TO THE GAME WITH THE DEFAULT "SPRITE ME" SPRITE!
 //I'm annoyed I even have to tell you this! SPRITE FIRST, then commit.
 
@@ -77,7 +76,6 @@
 /obj/item/mecha_parts/mecha_equipment/proc/is_melee()
 	return range&MELEE
 
-
 /obj/item/mecha_parts/mecha_equipment/proc/action_checks(atom/target)
 	if(!target)
 		return 0
@@ -95,9 +93,6 @@
 	return
 
 /obj/item/mecha_parts/mecha_equipment/proc/can_attach(obj/mecha/M as obj)
-	if(M.equipment.len >= M.max_equip)
-		return 0
-
 	if (ispath(required_type))
 		return istype(M, required_type)
 
@@ -107,13 +102,8 @@
 
 	return 0
 
-/obj/item/mecha_parts/mecha_equipment/proc/attach(obj/mecha/M as obj)
-	M.equipment += src
+/obj/item/mecha_parts/mecha_equipment/proc/attached(obj/mecha/M as obj)
 	chassis = M
-	src.loc = M
-	M.log_message("[src] initialized.")
-	if(!M.selected)
-		M.selected = src
 	src.update_chassis_page()
 	return
 

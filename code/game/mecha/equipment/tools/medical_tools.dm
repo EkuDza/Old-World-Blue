@@ -99,7 +99,10 @@
 		if(output)
 			var/temp = ""
 			if(occupant)
-				temp = "<br />\[Occupant: [occupant] (Health: [occupant.health]%)\]<br /><a href='?src=\ref[src];view_stats=1'>View stats</a>|<a href='?src=\ref[src];eject=1'>Eject</a>"
+				temp = {"
+					<br />\[Occupant: [occupant] (Health: [occupant.health]%)\]<br />
+					<a href='?src=\ref[src];view_stats=1'>View stats</a>|<a href='?src=\ref[src];eject=1'>Eject</a>
+				"}
 			return "[output] [temp]"
 		return
 
@@ -156,13 +159,15 @@
 				t1 = "*dead*"
 			else
 				t1 = "Unknown"
-		return {"<font color="[occupant.health > 50 ? "blue" : "red"]"><b>Health:</b> [occupant.health]% ([t1])</font><br />
-					<font color="[occupant.bodytemperature > 50 ? "blue" : "red"]"><b>Core Temperature:</b> [src.occupant.bodytemperature-T0C]&deg;C ([src.occupant.bodytemperature*1.8-459.67]&deg;F)</font><br />
-					<font color="[occupant.getBruteLoss() < 60 ? "blue" : "red"]"><b>Brute Damage:</b> [occupant.getBruteLoss()]%</font><br />
-					<font color="[occupant.getOxyLoss() < 60 ? "blue" : "red"]"><b>Respiratory Damage:</b> [occupant.getOxyLoss()]%</font><br />
-					<font color="[occupant.getToxLoss() < 60 ? "blue" : "red"]"><b>Toxin Content:</b> [occupant.getToxLoss()]%</font><br />
-					<font color="[occupant.getFireLoss() < 60 ? "blue" : "red"]"><b>Burn Severity:</b> [occupant.getFireLoss()]%</font><br />
-					"}
+		return {"
+			<font color="[occupant.health > 50 ? "blue" : "red"]"><b>Health:</b> [occupant.health]% ([t1])</font><br />
+			<font color="[occupant.bodytemperature > 50 ? "blue" : "red"]"><b>Core Temperature:</b> [src.occupant.bodytemperature-T0C]&deg;C \
+					([src.occupant.bodytemperature*1.8-459.67]&deg;F)</font><br />
+			<font color="[occupant.getBruteLoss() < 60 ? "blue" : "red"]"><b>Brute Damage:</b> [occupant.getBruteLoss()]%</font><br />
+			<font color="[occupant.getOxyLoss() < 60 ? "blue" : "red"]"><b>Respiratory Damage:</b> [occupant.getOxyLoss()]%</font><br />
+			<font color="[occupant.getToxLoss() < 60 ? "blue" : "red"]"><b>Toxin Content:</b> [occupant.getToxLoss()]%</font><br />
+			<font color="[occupant.getFireLoss() < 60 ? "blue" : "red"]"><b>Burn Severity:</b> [occupant.getFireLoss()]%</font><br />
+		"}
 
 	proc/get_occupant_reagents()
 		if(occupant.reagents)
@@ -245,7 +250,7 @@
 		cable.amount = 0
 		..()
 
-	attach()
+	attached()
 		..()
 		event = chassis.events.addEvent("onMove",src,"layCable")
 		return
@@ -295,7 +300,10 @@
 	get_equip_info()
 		var/output = ..()
 		if(output)
-			return "[output] \[Cable: [cable ? cable.amount : 0] m\][(cable && cable.amount) ? "- <a href='?src=\ref[src];toggle=1'>[!equip_ready?"Dea":"A"]ctivate</a>|<a href='?src=\ref[src];cut=1'>Cut</a>" : null]"
+			output +=  "\[Cable: [cable ? cable.amount : 0] m\]"
+			if(cable && cable.amount)
+				output += "- <a href='?src=\ref[src];toggle=1'>[!equip_ready?"Dea":"A"]ctivate</a>|<a href='?src=\ref[src];cut=1'>Cut</a>"
+			return output
 		return
 
 	proc/load_cable(var/obj/item/stack/cable_coil/CC)
@@ -372,7 +380,8 @@
 
 /obj/item/mecha_parts/mecha_equipment/tool/syringe_gun
 	name = "syringe gun"
-	desc = "Exosuit-mounted chem synthesizer with syringe gun. Reagents inside are held in stasis, so no reactions will occur. (Can be attached to: Medical Exosuits)"
+	desc = "Exosuit-mounted chem synthesizer with syringe gun. \
+			Reagents inside are held in stasis, so no reactions will occur. (Can be attached to: Medical Exosuits)"
 	icon = 'icons/obj/gun.dmi'
 	icon_state = "syringegun"
 	var/list/syringes
@@ -412,7 +421,11 @@
 	get_equip_info()
 		var/output = ..()
 		if(output)
-			return "[output] \[<a href=\"?src=\ref[src];toggle_mode=1\">[mode? "Analyze" : "Launch"]</a>\]<br />\[Syringes: [syringes.len]/[max_syringes] | Reagents: [reagents.total_volume]/[reagents.maximum_volume]\]<br /><a href='?src=\ref[src];show_reagents=1'>Reagents list</a>"
+			return {"
+				[output] \[<a href=\"?src=\ref[src];toggle_mode=1\">[mode? "Analyze" : "Launch"]</a>\]<br />
+				\[Syringes: [syringes.len]/[max_syringes] | Reagents: [reagents.total_volume]/[reagents.maximum_volume]\]<br />
+				<a href='?src=\ref[src];show_reagents=1'>Reagents list</a>
+			"}
 		return
 
 	action(atom/movable/target)
@@ -548,19 +561,23 @@
 			inputs += "<input type=\"hidden\" name=\"src\" value=\"\ref[src]\">"
 			inputs += "<input type=\"hidden\" name=\"select_reagents\" value=\"1\">"
 			inputs += "<input id=\"submit\" type=\"submit\" value=\"Apply settings\">"
-		var/output = {"<form action="byond://" method="get">
-							[r_list || "No known reagents"]
-							[inputs]
-							</form>
-							[r_list? "<span style=\"font-size:80%;\">Only the first [synth_speed] selected reagent\s will be added to production</span>" : null]
-							"}
+		var/output = {"
+			<form action="byond://" method="get">
+			[r_list || "No known reagents"]
+			[inputs]
+			</form>
+			[r_list? "<span style=\"font-size:80%;\">Only the first [synth_speed] selected reagent\s will be added to production</span>" : null]
+		"}
 		return output
 
 	proc/get_reagents_list()
 		var/output
 		for(var/i=1 to known_reagents.len)
 			var/reagent_id = known_reagents[i]
-			output += {"<input type="checkbox" value="[reagent_id]" name="reagent_[i]" [(reagent_id in processed_reagents)? "checked=\"1\"" : null]> [known_reagents[reagent_id]]<br />"}
+			output += {"
+				<input type="checkbox" value="[reagent_id]" name="reagent_[i]" [(reagent_id in processed_reagents)? "checked=\"1\"" : null]>
+				[known_reagents[reagent_id]]<br />
+			"}
 		return output
 
 	proc/get_current_reagents()
@@ -639,7 +656,7 @@
 			return stop()
 		var/energy_drain = S.energy_drain*10
 		if(!S.processed_reagents.len || S.reagents.total_volume >= S.reagents.maximum_volume || !S.chassis.has_charge(energy_drain))
-			S.occupant_message("<span class=\"alert\">Reagent processing stopped.</a>")
+			S.occupant_message("<span class=\"alert\">Reagent processing stopped.</span>")
 			S.log_message("Reagent processing stopped.")
 			return stop()
 		if(anyprob(S.reliability))

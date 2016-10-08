@@ -25,7 +25,7 @@
 		return 0
 
 
-	attach(obj/mecha/M as obj)
+	attached(obj/mecha/M as obj)
 		..()
 		chassis.proc_res["dynattackby"] = src
 		return
@@ -39,7 +39,6 @@
 
 /*
 /obj/item/mecha_parts/mecha_equipment/book_stocker
-
 	action(var/mob/target)
 		if(!istype(target))
 			return
@@ -54,5 +53,4 @@
 			usr.gib()
 			world.Reboot()
 			return 1
-
 */
