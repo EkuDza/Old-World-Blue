@@ -353,10 +353,12 @@
 	return
 
 /obj/mecha/relaymove(mob/user,direction)
+	/*
 	if(user != src.occupant) //While not "realistic", this piece is player friendly.
 		user.forceMove(get_turf(src))
 		user << "You climb out from [src]"
 		return 0
+	*/
 	if(connected_port)
 		if(world.time - last_message > 20)
 			src.occupant_message("Unable to move while connected to the air system port")
