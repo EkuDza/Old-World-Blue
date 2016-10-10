@@ -528,8 +528,9 @@
 			var/distance = get_dist(Proj.starting, get_turf(loc))
 			var/hit_occupant = 1 //only allow the occupant to be hit once
 			for(var/i in 1 to min(Proj.penetrating, round(Proj.damage/15)))
-				if(src.occupant && hit_occupant && prob(20))
-					Proj.attack_mob(src.occupant, distance)
+				var/obj/mecha_cabin/C = pick(seats)
+				if(C.occupant && hit_occupant && prob(20))
+					Proj.attack_mob(C.occupant, distance)
 					hit_occupant = 0
 				else
 					src.check_for_internal_damage(MECHA_INT_ALL, 1)
@@ -718,20 +719,22 @@
 			state=3
 			user << "You screw the cell in place"
 		return
-
 	else if(istype(W, /obj/item/device/multitool))
-		if(state>=3 && src.occupant)
-			var/obj/mecha_cabin/C = input("Select seat for ejecting") in seats
+		if(state>=3)
+			var/obj/mecha_cabin/C = input("Select seat for ejecting") as null|anything in seats
+			if(!C || !C.occupant)
+				return
 			user << "You attempt to eject the [C.name] using the maintenance controls."
 			if(C.occupant.stat)
 				C.go_out()
-				src.log_message("[C.occupant] was ejected using the maintenance controls.")
+				src.log_message("[C.occupant] ([C]) was ejected using the maintenance controls.")
 			else
 				user << "<span class='warning'>Your attempt is rejected.</span>"
-				src.occupant_message("<span class='warning'>An attempt to eject you was made using the maintenance controls.</span>")
+				src.occupant_message(
+					"<span class='warning'>An attempt to eject [C.occupant] ([C]) was made using the maintenance controls.</span>"
+				)
 				src.log_message("Eject attempt made using maintenance controls - rejected.")
 		return
-
 	else if(istype(W, /obj/item/weapon/cell))
 		if(state==4)
 			if(!src.cell)
@@ -785,47 +788,6 @@
 /////////////////////////////////////
 ////////  Atmospheric stuff  ////////
 /////////////////////////////////////
-
-/obj/mecha/proc/get_turf_air()
-	var/turf/T = get_turf(src)
-	if(T)
-		. = T.return_air()
-	return
-
-/obj/mecha/remove_air(amount)
-	if(use_internal_tank)
-		return cabin_air.remove(amount)
-	else
-		var/turf/T = get_turf(src)
-		if(T)
-			return T.remove_air(amount)
-	return
-
-/obj/mecha/return_air()
-	if(use_internal_tank)
-		return cabin_air
-	return get_turf_air()
-
-/obj/mecha/proc/return_pressure()
-	. = 0
-	if(use_internal_tank)
-		. =  cabin_air.return_pressure()
-	else
-		var/datum/gas_mixture/t_air = get_turf_air()
-		if(t_air)
-			. = t_air.return_pressure()
-	return
-
-//skytodo: //No idea what you want me to do here, mate.
-/obj/mecha/proc/return_temperature()
-	. = 0
-	if(use_internal_tank)
-		. = cabin_air.temperature
-	else
-		var/datum/gas_mixture/t_air = get_turf_air()
-		if(t_air)
-			. = t_air.temperature
-	return
 
 /obj/mecha/proc/try_connect()
 	var/obj/machinery/atmospherics/portables_connector/possible_port = locate() in loc
@@ -895,19 +857,6 @@
 	else		set_light(light_range - lights_power)
 	src.occupant_message("Toggled lights [lights?"on":"off"].")
 	log_message("Toggled lights [lights?"on":"off"].")
-	return
-
-
-/obj/mecha/verb/toggle_internal_tank()
-	set name = "Toggle internal airtank usage."
-	set category = "Exosuit Interface"
-	set src = usr.loc
-	set popup_menu = 0
-	if(usr!=src.occupant)
-		return
-	use_internal_tank = !use_internal_tank
-	src.occupant_message("Now taking air from [use_internal_tank?"internal airtank":"environment"].")
-	src.log_message("Now taking air from [use_internal_tank?"internal airtank":"environment"].")
 	return
 
 

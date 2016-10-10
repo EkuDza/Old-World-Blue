@@ -3,6 +3,7 @@
 	var/mob/living/carbon/occupant = null
 	var/pass_move = 0
 	var/obj/mecha/chasis = null
+	var/use_internal_tank = 0
 
 /obj/mecha_cabin/pilot
 	name = "Pilot"
@@ -69,7 +70,54 @@
 			//if they're close enough, allow the occupant to see the screen through the viewport or whatever.
 			return STATUS_UPDATE
 
-// Helper stuff
+/////////////////////////////////////
+////////  Atmospheric stuff  ////////
+/////////////////////////////////////
+
+/obj/mecha_cabin/proc/get_turf_air()
+	var/turf/T = get_turf(src)
+	if(T)
+		. = T.return_air()
+	return
+
+/obj/mecha_cabin/remove_air(amount)
+	if(use_internal_tank)
+		return cabin_air.remove(amount)
+	else
+		var/turf/T = get_turf(src)
+		if(T)
+			return T.remove_air(amount)
+	return
+
+/obj/mecha_cabin/return_air()
+	if(use_internal_tank)
+		return cabin_air
+	return get_turf_air()
+
+/obj/mecha_cabin/proc/return_pressure()
+	. = 0
+	if(use_internal_tank)
+		. =  cabin_air.return_pressure()
+	else
+		var/datum/gas_mixture/t_air = get_turf_air()
+		if(t_air)
+			. = t_air.return_pressure()
+	return
+
+/obj/mecha_cabin/proc/return_temperature()
+	. = 0
+	if(use_internal_tank)
+		. = cabin_air.temperature
+	else
+		var/datum/gas_mixture/t_air = get_turf_air()
+		if(t_air)
+			. = t_air.temperature
+	return
+
+
+///////////////////////////////
+////////  Interaction  ////////
+///////////////////////////////
 
 /obj/mecha_cabin/relaymove(mob/user,direction)
 	if(pass_move && chasis)
@@ -80,35 +128,10 @@
 	if(occupant && occupant.client)
 		occupant.show_message("<span class='message'>[text]</span>", 2)
 
-// Verbs
 
-/obj/mecha_cabin/proc/connect_to_port()
-	set name = "Connect to port"
-	set category = "Exosuit Interface"
-	set src = usr.loc
-	set popup_menu = 0
-	if(usr!=src.occupant)
-		return
-	chasis.try_connect()
-
-/obj/mecha_cabin/proc/disconnect_from_port()
-	set name = "Disconnect from port"
-	set category = "Exosuit Interface"
-	set src = usr.loc
-	set popup_menu = 0
-	if(usr!=src.occupant)
-		return
-	chasis.disconnect()
-
-/obj/mecha_cabin/verb/toggle_lights()
-	set name = "Toggle Lights"
-	set category = "Exosuit Interface"
-	set src = usr.loc
-	set popup_menu = 0
-	chasis.toggle_lights()
-
-
-// Enter/Exit
+//////////////////////////////
+////////  Enter/Exit  ////////
+//////////////////////////////
 
 /obj/mecha_cabin/proc/moved_inside(var/mob/living/carbon/human/H as mob)
 
@@ -175,7 +198,33 @@
 		mob_container.set_dir(chasis.dir)
 	return
 
+
 // Verbs
+
+/obj/mecha_cabin/proc/connect_to_port()
+	set name = "Connect to port"
+	set category = "Exosuit Interface"
+	set src = usr.loc
+	set popup_menu = 0
+	if(usr!=src.occupant)
+		return
+	chasis.try_connect()
+
+/obj/mecha_cabin/proc/disconnect_from_port()
+	set name = "Disconnect from port"
+	set category = "Exosuit Interface"
+	set src = usr.loc
+	set popup_menu = 0
+	if(usr!=src.occupant)
+		return
+	chasis.disconnect()
+
+/obj/mecha_cabin/verb/toggle_lights()
+	set name = "Toggle Lights"
+	set category = "Exosuit Interface"
+	set src = usr.loc
+	set popup_menu = 0
+	chasis.toggle_lights()
 
 /obj/mecha_cabin/verb/view_stats()
 	set name = "View Stats"
@@ -187,3 +236,28 @@
 	//pr_update_stats.start()
 	src.occupant << browse(chasis.get_stats_html(), "window=exosuit")
 	return
+
+/obj/mecha_cabin/verb/toggle_internal_tank()
+	set name = "Toggle internal airtank usage."
+	set category = "Exosuit Interface"
+	set src = usr.loc
+	set popup_menu = 0
+	if(usr!=src.occupant)
+		return
+	use_internal_tank = !use_internal_tank
+	chsis.occupant_message("[src] taking air from [use_internal_tank?"internal airtank":"environment"].")
+	chasis.log_message("[src] now taking air from [use_internal_tank?"internal airtank":"environment"].")
+	return
+
+/////////////////
+///// Topic /////
+/////////////////
+
+/obj/mecha_cabin/Topic(href, href_list)
+	..()
+	if(href_list["update_content"])
+		if(usr != src.occupant)	return
+		send_byjax(src.occupant,"exosuit.browser","content",src.get_stats_part())
+		return
+
+
