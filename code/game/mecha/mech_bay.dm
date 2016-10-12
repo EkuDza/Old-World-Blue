@@ -223,6 +223,7 @@
 	if(istype(I, /obj/item/weapon/card/id) || istype(I, /obj/item/device/pda))
 		if(allowed(user))
 			locked = !locked
+			user << "<span class='notice'>[recharge_port] now [!locked?"un":null]locked</span>"
 	else if(istype(I, /obj/item/weapon/card/emag) && locked)
 		locked = 0
 

@@ -36,7 +36,6 @@
 	var/last_message = 0
 	var/add_req_access = 1
 	var/maint_access = 1
-	var/dna	//dna-locking the mech
 	var/list/proc_res = list() //stores proc owners, like proc_res["functionname"] = owner reference
 	var/datum/effect/effect/system/spark_spread/spark_system = new
 	var/lights = 0
@@ -48,8 +47,6 @@
 	var/obj/machinery/portable_atmospherics/canister/internal_tank
 	var/datum/gas_mixture/cabin_air
 	var/obj/machinery/atmospherics/portables_connector/connected_port = null
-
-	var/obj/item/device/radio/radio = null
 
 	var/max_temperature = 25000
 	var/internal_damage_threshold = 50 //health percentage below which internal damage is possible
@@ -65,8 +62,6 @@
 
 	var/wreckage
 
-	var/list/equipment = new
-	var/obj/item/mecha_parts/mecha_equipment/selected
 	var/max_equip = 3
 	var/datum/events/events
 
@@ -85,25 +80,18 @@
 	events = new
 
 	icon_state += "-open"
-	add_radio()
 	add_cabin()
-	if(!add_airtank()) //we check this here in case mecha does not have an internal tank available by default - WIP
-		removeVerb(/obj/mecha/verb/connect_to_port)
-		removeVerb(/obj/mecha/verb/toggle_internal_tank)
+	add_airtank()
 	spark_system.set_up(2, 0, src)
 	spark_system.attach(src)
 	add_cell()
 	add_iterators()
-	removeVerb(/obj/mecha/verb/disconnect_from_port)
 	log_message("[src.name] created.")
 	loc.Entered(src)
 	mechas_list += src //global mech list
 	return
 
 /obj/mecha/Destroy()
-	src.go_out()
-	for(var/mob/M in src) //Let's just be ultra sure
-		M.Move(loc)
 
 	if(loc)
 		loc.Exited(src)
@@ -111,17 +99,8 @@
 	if(prob(30))
 		explosion(get_turf(loc), 0, 0, 1, 3)
 
-	if(wreckage)
-		var/obj/effect/decal/mecha_wreckage/WR = new wreckage(loc)
-		for(var/obj/item/mecha_parts/mecha_equipment/E in equipment)
-			if(E.salvageable && prob(30))
-				WR.crowbar_salvage += E
-				E.forceMove(WR)
-				E.equip_ready = 1
-				E.reliability = round(rand(E.reliability/3,E.reliability))
-			else
-				E.forceMove(loc)
-				E.destroy()
+	var/obj/effect/decal/mecha_wreckage/WR = wreckage ? new wreckage(loc) : null
+	if(WR)
 		if(cell)
 			WR.crowbar_salvage += cell
 			cell.forceMove(WR)
@@ -130,16 +109,19 @@
 			WR.crowbar_salvage += internal_tank
 			internal_tank.forceMove(WR)
 	else
-		for(var/obj/item/mecha_parts/mecha_equipment/E in equipment)
-			detach(E, loc)
-			E.destroy()
 		if(cell)
 			qdel(cell)
 		if(internal_tank)
 			qdel(internal_tank)
-	equipment.Cut()
 	cell = null
 	internal_tank = null
+
+	for(var/obj/mecha_cabin/C in seats)
+		C.destroy(WR)
+
+	for(var/mob/M in src) //Let's just be ultra sure
+		M.Move(loc)
+
 
 	qdel(pr_int_temp_processor)
 	qdel(pr_inertial_movement)
@@ -187,13 +169,6 @@
 		"nitrogen", N2STANDARD*cabin_air.volume/(R_IDEAL_GAS_EQUATION*cabin_air.temperature)
 	)
 	return cabin_air
-
-/obj/mecha/proc/add_radio()
-	radio = new(src)
-	radio.name = "[src] radio"
-	radio.icon = icon
-	radio.icon_state = icon_state
-	radio.subspace_transmission = 1
 
 /obj/mecha/proc/add_iterators()
 	pr_int_temp_processor = new /datum/global_iterator/mecha_preserve_temp(list(src))
@@ -306,7 +281,7 @@
 	else if(src.dir!=direction)
 		move_result = mechturn(direction)
 	else
-		move_result	= mechstep(direction)
+		move_result = mechstep(direction)
 	if(move_result)
 		can_move = 0
 		use_power(step_energy_drain)
@@ -370,11 +345,13 @@
 			var/int_dam_flag = safepick(possible_int_damage)
 			if(int_dam_flag)
 				setInternalDamage(int_dam_flag)
+/*
 	if(prob(5))
 		if(ignore_threshold || src.health*100/initial(src.health)<src.internal_damage_threshold)
 			var/obj/item/mecha_parts/mecha_equipment/destr = safepick(equipment)
 			if(destr)
 				destr.destroy()
+*/
 	return
 
 /obj/mecha/proc/hasInternalDamage(int_dam_flag=null)
@@ -794,18 +771,18 @@
 	if(possible_port && !possible_port.connected_device)
 		if(connect(possible_port))
 			src.occupant_message("\blue [name] connects to the port.")
+			for(var/obj/mecha_cabin/C in seats)
+				if(C.pass_move)
+					C.verbs |= /obj/mecha_cabin/proc/disconnect_from_port
+					C.verbs -= /obj/mecha_cabin/proc/connect_to_port
 			return
 		else
 			src.occupant_message("\red [name] failed to connect to the port.")
 			return
-		for(var/obj/mecha_cabin/C in seats)
-			if(C.pass_move)
-				C.verbs |= /obj/mecha_cabin/proc/disconnect_from_port
-				C.verbs -= /obj/mecha_cabin/proc/connect_to_port
 	else
 		src.occupant_message("Nothing happens")
 
-/obj/mecha/proc/connect()
+/obj/mecha/proc/connect(var/obj/machinery/atmospherics/portables_connector/new_port)
 	//Make sure not already connected to something else
 	if(connected_port || !new_port || new_port.connected_device)
 		return 0
@@ -933,47 +910,6 @@
 ///// Rendering stats window ///////
 ////////////////////////////////////
 
-/obj/mecha/proc/get_stats_html()
-	var/output = {"
-		<html>
-		<head><title>[src.name] data</title>
-		<style>
-			body {color: #00ff00; background: #000000; font-family:"Lucida Console",monospace; font-size: 12px;}
-			hr {border: 1px solid #0f0; color: #0f0; background-color: #0f0;}
-			a {padding:2px 5px;;color:#0f0;}
-			.wr {margin-bottom: 5px;}
-			.header {cursor:pointer;}
-			.open, .closed {background: #32CD32; color:#000; padding:1px 2px;}
-			.links a {margin-bottom: 2px;padding-top:3px;}
-			.visible {display: block;}
-			.hidden {display: none;}
-		</style>
-		<script language='javascript' type='text/javascript'>
-			[js_byjax]
-			[js_dropdowns]
-			function ticker() {
-			    setInterval(function(){
-			        window.location='byond://?src=\ref[src]&update_content=1';
-			    }, 1000);
-			}
-
-			window.onload = function() {
-				dropdowns();
-				ticker();
-			}
-		</script>
-		</head>
-		<body>
-			<div id='content'>[src.get_stats_part()]</div>
-			<div id='eq_list'>[src.get_equipment_list()]</div>
-			<hr>
-			<div id='commands'>[src.get_commands()]</div>
-		</body>
-		</html>
-	 "}
-	return output
-
-
 /obj/mecha/proc/report_internal_damage()
 	var/output = null
 	var/list/dam_reports = list(
@@ -989,9 +925,6 @@
 		if(hasInternalDamage(intdamflag))
 			output += dam_reports[tflag]
 			output += "<br />"
-	if(return_pressure() > WARNING_HIGH_PRESSURE)
-		output += "<font color='red'><b>DANGEROUSLY HIGH CABIN PRESSURE</b></font><br />"
-	return output
 
 
 /obj/mecha/proc/get_stats_part()
@@ -999,103 +932,34 @@
 	var/cell_charge = get_charge()
 	var/tank_pressure = internal_tank ? round(internal_tank.return_pressure(),0.01) : "None"
 	var/tank_temperature = internal_tank ? internal_tank.return_temperature() : "Unknown"
-	var/cabin_pressure = round(return_pressure(),0.01)
-	var/output = {"
-		[report_internal_damage()]
+	return {"
 		[integrity<30?"<font color='red'><b>DAMAGE LEVEL CRITICAL</b></font><br>":null]
 		<b>Integrity: </b> [integrity]%<br>
 		<b>Powercell charge: </b>[isnull(cell_charge)?"No powercell installed":"[cell.percent()]%"]<br>
 		<b>Air source: </b>[use_internal_tank?"Internal Airtank":"Environment"]<br>
 		<b>Airtank pressure: </b>[tank_pressure]kPa<br>
 		<b>Airtank temperature: </b>[tank_temperature]K|[tank_temperature - T0C]&deg;C<br>
-		<b>Cabin pressure: </b>[cabin_pressure>WARNING_HIGH_PRESSURE ? "<font color='red'>[cabin_pressure]</font>": cabin_pressure]kPa<br>
-		<b>Cabin temperature: </b> [return_temperature()]K|[return_temperature() - T0C]&deg;C<br>
-		<b>Lights: </b>[lights?"on":"off"]<br>
-		[src.dna?"<b>DNA-locked:</b><br> \
-		<span style='font-size:10px;letter-spacing:-1px;'>[src.dna]</span> \[<a href='?src=\ref[src];reset_dna=1'>Reset</a>\]<br>":null]
 	"}
-	return output
-
-/obj/mecha/proc/get_commands()
-	var/output = {"
-		<div class='wr'>
-		<div class='header'>Electronics</div>
-		<div class='links'>
-		<a href='?src=\ref[src];toggle_lights=1'>Toggle Lights</a><br>
-		<b>Radio settings:</b><br>
-		Microphone: <a href='?src=\ref[src];rmictoggle=1'><span id="rmicstate">[radio.broadcasting?"Engaged":"Disengaged"]</span></a><br>
-		Speaker: <a href='?src=\ref[src];rspktoggle=1'><span id="rspkstate">[radio.listening?"Engaged":"Disengaged"]</span></a><br>
-		Frequency:
-		<a href='?src=\ref[src];rfreq=-10'>-</a>
-		<a href='?src=\ref[src];rfreq=-2'>-</a>
-		<span id="rfreq">[format_frequency(radio.frequency)]</span>
-		<a href='?src=\ref[src];rfreq=2'>+</a>
-		<a href='?src=\ref[src];rfreq=10'>+</a><br>
-		</div>
-		</div>
-		<div class='wr'>
-		<div class='header'>Airtank</div>
-		<div class='links'>
-		<a href='?src=\ref[src];toggle_airtank=1'>Toggle Internal Airtank Usage</a><br>
-		[(/obj/mecha/verb/disconnect_from_port in src.verbs)?"<a href='?src=\ref[src];port_disconnect=1'>Disconnect from port</a><br>":null]
-		[(/obj/mecha/verb/connect_to_port in src.verbs)?"<a href='?src=\ref[src];port_connect=1'>Connect to port</a><br>":null]
-		</div>
-		</div>
-		<div class='wr'>
-		<div class='header'>Permissions & Logging</div>
-		<div class='links'>
-		<a href='?src=\ref[src];toggle_id_upload=1'><span id='t_id_upload'>[add_req_access?"L":"Unl"]ock ID upload panel</span></a><br>
-		<a href='?src=\ref[src];toggle_maint_access=1'><span id='t_maint_access'>[maint_access?"Forbid":"Permit"] maintenance protocols</span></a><br>
-		<a href='?src=\ref[src];dna_lock=1'>DNA-lock</a><br>
-		<a href='?src=\ref[src];view_log=1'>View internal log</a><br>
-		<a href='?src=\ref[src];change_name=1'>Change exosuit name</a><br>
-		</div>
-		</div>
-		<div id='equipment_menu'>[get_equipment_menu()]</div>
-		<hr>
-		[(/obj/mecha/verb/eject in src.verbs)?"<a href='?src=\ref[src];eject=1'>Eject</a><br>":null]
-	"}
-	return output
-
-/obj/mecha/proc/get_equipment_menu() //outputs mecha html equipment menu
-	var/output
-	if(equipment.len)
-		output += {"<div class='wr'>
-						<div class='header'>Equipment</div>
-						<div class='links'>"}
-		for(var/obj/item/mecha_parts/mecha_equipment/W in equipment)
-			output += "[W.name] <a href='?src=\ref[src];detach=\ref[W]'>Detach</a><br>"
-		output += "<b>Available equipment slots:</b> [max_equip-equipment.len]"
-		output += "</div></div>"
-	return output
-
-/obj/mecha/proc/get_equipment_list() //outputs mecha equipment list in html
-	if(!equipment.len)
-		return
-	var/output = "<b>Equipment:</b><div style=\"margin-left: 15px;\">"
-	for(var/obj/item/mecha_parts/mecha_equipment/MT in equipment)
-		output += "<div id='\ref[MT]'>[MT.get_equip_info()]</div>"
-	output += "</div>"
-	return output
-
 
 /obj/mecha/proc/get_log_html()
 	var/output = "<html><head><title>[src.name] Log</title></head><body style='font: 13px 'Courier', monospace;'>"
 	for(var/list/entry in log)
-		output += {"<div style='font-weight: bold;'>[time2text(entry["time"],"DDD MMM DD hh:mm:ss")] [game_year]</div>
-						<div style='margin-left:15px; margin-bottom:10px;'>[entry["message"]]</div>
-						"}
+		output += {"
+			<div style='font-weight: bold;'>[time2text(entry["time"],"DDD MMM DD hh:mm:ss")] [game_year]</div>
+			<div style='margin-left:15px; margin-bottom:10px;'>[entry["message"]]</div>
+		"}
 	output += "</body></html>"
 	return output
 
 
 /obj/mecha/proc/output_access_dialog(obj/item/weapon/card/id/id_card, mob/user)
 	if(!id_card || !user) return
-	var/output = {"<html>
+	var/output = {"
+		<html>
 		<head><style>
-		h1 {font-size:15px;margin-bottom:4px;}
-		body {color: #00ff00; background: #000000; font-family:"Courier New", Courier, monospace; font-size: 12px;}
-		a {color:#0f0;}
+			h1 {font-size:15px;margin-bottom:4px;}
+			body {color: #00ff00; background: #000000; font-family:"Courier New", Courier, monospace; font-size: 12px;}
+			a {color:#0f0;}
 		</style></head>
 		<body>
 		<h1>Following keycodes are present in this system:</h1>
@@ -1110,7 +974,8 @@
 		output += "[a_name] - <a href='?src=\ref[src];add_req_access=[a];user=\ref[user];id_card=\ref[id_card]'>Add</a><br>"
 	output += {"
 		<hr><a href='?src=\ref[src];finish_req_access=1;user=\ref[user]'>Finish</a>
-		<font color='red'>(Warning! The ID upload panel will be locked. It can be unlocked only through Exosuit Interface.)</font>"}
+		<font color='red'>(Warning! The ID upload panel will be locked.
+			It can be unlocked only through Exosuit Interface.)</font>"}
 	output += "</body></html>"
 	user << browse(output, "window=exosuit_add_access")
 	onclose(user, "exosuit_add_access")
@@ -1120,8 +985,6 @@
 	if(!id_card || !user) return
 
 	var/maint_options = "<a href='?src=\ref[src];set_internal_tank_valve=1;user=\ref[user]'>Set Cabin Air Pressure</a>"
-	if (locate(/obj/item/mecha_parts/mecha_equipment/tool/passenger) in contents)
-		maint_options += "<a href='?src=\ref[src];remove_passenger=1;user=\ref[user]'>Remove Passenger</a>"
 
 	var/output = {"
 		<html><head>
@@ -1153,12 +1016,12 @@
 
 /obj/mecha/proc/log_message(message as text,red=null)
 	log.len++
-	log[log.len] = list("time"=world.timeofday,"message"="[red?"<font color='red'>":null][message][red?"</font>":null]")
+	log[log.len] = list("time"=world.timeofday,"message"=red?"<font color='red'>[message]</font>":message)
 	return log.len
 
 /obj/mecha/proc/log_append_to_last(message as text,red=null)
 	var/list/last_entry = src.log[src.log.len]
-	last_entry["message"] += "<br>[red?"<font color='red'>":null][message][red?"</font>":null]"
+	last_entry["message"] += "<br>[red?"<font color='red'>[message]</font>":message]"
 	return
 
 
@@ -1168,108 +1031,18 @@
 
 /obj/mecha/Topic(href, href_list)
 	..()
-	if(href_list["update_content"])
-		if(usr != src.occupant)	return
-		send_byjax(src.occupant,"exosuit.browser","content",src.get_stats_part())
-		return
 	if(href_list["close"])
 		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
 		return
 	if(usr.stat > 0)
 		return
+	if(!in_range(src, usr))	return
+
 	var/datum/topic_input/filter = new /datum/topic_input(href,href_list)
-	if(href_list["select_equip"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		var/obj/item/mecha_parts/mecha_equipment/equip = filter.getObj("select_equip")
-		if(equip)
-			src.selected = equip
-			src.occupant_message("You switch to [equip]")
-			src.visible_message("[src] raises [equip]")
-			send_byjax(src.occupant,"exosuit.browser","eq_list",src.get_equipment_list())
-		return
-	if(href_list["detach"])
-		var/obj/item/mecha_parts/mecha_equipment/E = locate(href_list["detach"])
-		detach(E)
-	if(href_list["eject"])
-		if(usr != src.occupant)	return
-		playsound(src,'sound/mecha/ROBOTIC_Servo_Large_Dual_Servos_Open_mono.wav',100,1)
-		src.eject()
-		return
-	if(href_list["toggle_lights"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		src.toggle_lights()
-		return
-	if(href_list["toggle_airtank"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		src.toggle_internal_tank()
-		return
-	if(href_list["rmictoggle"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		radio.broadcasting = !radio.broadcasting
-		send_byjax(src.occupant,"exosuit.browser","rmicstate",(radio.broadcasting?"Engaged":"Disengaged"))
-		return
-	if(href_list["rspktoggle"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		radio.listening = !radio.listening
-		send_byjax(src.occupant,"exosuit.browser","rspkstate",(radio.listening?"Engaged":"Disengaged"))
-		return
-	if(href_list["rfreq"])
-		if(usr != src.occupant)	return
-		var/new_frequency = (radio.frequency + filter.getNum("rfreq"))
-		if (!radio.freerange || (radio.frequency < 1200 || radio.frequency > 1600))
-			new_frequency = sanitize_frequency(new_frequency)
-		radio.set_frequency(new_frequency)
-		send_byjax(src.occupant,"exosuit.browser","rfreq","[format_frequency(radio.frequency)]")
-		return
-	if(href_list["port_disconnect"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		src.disconnect_from_port()
-		return
-	if (href_list["port_connect"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		src.connect_to_port()
-		return
-	if (href_list["view_log"])
-		if(usr != src.occupant)	return
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-		src.occupant << browse(src.get_log_html(), "window=exosuit_log")
-		onclose(occupant, "exosuit_log")
-		return
-	if (href_list["change_name"])
-		if(usr != src.occupant)	return
-		var/newname = sanitizeSafe(input(occupant,"Choose new exosuit name","Rename exosuit",initial(name)) as text, MAX_NAME_LEN)
-		if(newname)
-			usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_22_stereo_complite.wav',channel=4, volume=100);
-			name = newname
-		else
-			alert(occupant, "nope.avi")
-		return
-	if (href_list["toggle_id_upload"])
-		if(usr != src.occupant)	return
-		add_req_access = !add_req_access
-		send_byjax(src.occupant,"exosuit.browser","t_id_upload","[add_req_access?"L":"Unl"]ock ID upload panel")
-		return
-	if(href_list["toggle_maint_access"])
-		if(usr != src.occupant)	return
-		if(state)
-			occupant_message("<font color='red'>Maintenance protocols in effect</font>")
-			return
-		maint_access = !maint_access
-		send_byjax(src.occupant,"exosuit.browser","t_maint_access","[maint_access?"Forbid":"Permit"] maintenance protocols")
-		return
 	if(href_list["req_access"] && add_req_access)
-		if(!in_range(src, usr))	return
 		output_access_dialog(filter.getObj("id_card"),filter.getMob("user"))
 		return
 	if(href_list["maint_access"] && maint_access)
-		if(!in_range(src, usr))	return
 		var/mob/user = filter.getMob("user")
 		if(user)
 			if(state==0)
@@ -1281,91 +1054,26 @@
 			output_maintenance_dialog(filter.getObj("id_card"),user)
 		return
 	if(href_list["set_internal_tank_valve"] && state >=1)
-		if(!in_range(src, usr))	return
 		var/mob/user = filter.getMob("user")
 		if(user)
 			var/new_pressure = input(user,"Input new output pressure","Pressure setting",internal_tank_valve) as num
 			if(new_pressure)
 				internal_tank_valve = new_pressure
 				user << "The internal pressure valve has been set to [internal_tank_valve]kPa."
-	if(href_list["remove_passenger"] && state >= 1)
-		var/mob/user = filter.getMob("user")
-		var/list/passengers = list()
-		for (var/obj/item/mecha_parts/mecha_equipment/tool/passenger/P in contents)
-			if (P.occupant)
-				passengers["[P.occupant]"] = P
-
-		if (!passengers)
-			user << "\red There are no passengers to remove."
-			return
-
-		var/pname = input(user, "Choose a passenger to forcibly remove.", "Forcibly Remove Passenger") as null|anything in passengers
-
-		if (!pname)
-			return
-
-		var/obj/item/mecha_parts/mecha_equipment/tool/passenger/P = passengers[pname]
-		var/mob/occupant = P.occupant
-
-		user.visible_message("\red [user] begins opening the hatch on \the [P]...", "\red You begin opening the hatch on \the [P]...")
-		if (!do_after(user, 40, needhand=0))
-			return
-
-		user.visible_message(
-			"\red [user] opens the hatch on \the [P] and removes [occupant]!",
-			"\red You open the hatch on \the [P] and remove [occupant]!"
-		)
-		P.go_out()
-		P.log_message("[occupant] was removed.")
-		return
 	if(href_list["add_req_access"] && add_req_access && filter.getObj("id_card"))
-		if(!in_range(src, usr))	return
 		operation_req_access += filter.getNum("add_req_access")
 		output_access_dialog(filter.getObj("id_card"),filter.getMob("user"))
 		return
 	if(href_list["del_req_access"] && add_req_access && filter.getObj("id_card"))
-		if(!in_range(src, usr))	return
 		operation_req_access -= filter.getNum("del_req_access")
 		output_access_dialog(filter.getObj("id_card"),filter.getMob("user"))
 		return
 	if(href_list["finish_req_access"])
-		if(!in_range(src, usr))	return
 		add_req_access = 0
 		var/mob/user = filter.getMob("user")
 		user << browse(null,"window=exosuit_add_access")
 		user << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_22_stereo_complite.wav',channel=4, volume=100);
 		return
-	if(href_list["dna_lock"])
-		if(usr != src.occupant)	return
-		if(istype(occupant, /mob/living/carbon/brain))
-			occupant_message("You are a brain. No.")
-			usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_15_stereo_error.wav',channel=4, volume=100);
-			return
-		if(src.occupant)
-			src.dna = src.occupant.dna.unique_enzymes
-			src.occupant_message("You feel a prick as the needle takes your DNA sample.")
-			usr << sound('sound/mecha/UI_SCI-FI_Compute_01_Wet_stereo.wav',channel=4, volume=100);
-		return
-	if(href_list["reset_dna"])
-		if(usr != src.occupant)	return
-		src.dna = null
-		usr << sound('sound/mecha/UI_SCI-FI_Tone_10_stereo.wav',channel=4, volume=100);
-	if(href_list["repair_int_control_lost"])
-		if(usr != src.occupant)	return
-		src.occupant_message("Recalibrating coordination system.")
-		src.log_message("Recalibration of coordination system started.")
-		usr << sound('sound/mecha/UI_SCI-FI_Compute_01_Wet_stereo.wav',channel=4, volume=100);
-		var/T = src.loc
-		if(do_after(100))
-			if(T == src.loc)
-				src.clearInternalDamage(MECHA_INT_CONTROL_LOST)
-				usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_22_stereo_complite.wav',channel=4, volume=100);
-				src.occupant_message("<font color='blue'>Recalibration successful.</font>")
-				src.log_message("Recalibration of coordination system finished with 0 errors.")
-			else
-				usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_15_stereo_error.wav',channel=4, volume=100);
-				src.occupant_message("<font color='red'>Recalibration failed.</font>")
-				src.log_message("Recalibration of coordination system failed with 1 error.",1)
 /*
 	if (href_list["ai_take_control"])
 		var/mob/living/silicon/ai/AI = locate(href_list["ai_take_control"])
