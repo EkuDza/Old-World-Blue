@@ -4,6 +4,9 @@
 	var/melee_can_hit = 1
 	var/list/destroyable_obj = list(/obj/mecha, /obj/structure/window, /obj/structure/grille, /turf/simulated/wall)
 	internal_damage_threshold = 50
+	seats = list(
+		new/obj/cabin/pilot/gunner(src)
+	)
 	maint_access = 0
 	//add_req_access = 0
 	//operation_req_access = list(access_hos)
@@ -121,125 +124,7 @@
 	return
 */
 
-/*
-	if(energy>0 && can_move)
-		if(step(src,direction))
-			can_move = 0
-			spawn(step_in) can_move = 1
-			if(overload)
-				energy = energy-2
-				health--
-			else
-				energy--
-			return 1
-
-	return 0
-*/
-/*
-/obj/mecha/combat/hear_talk(mob/M as mob, text)
-	..()
-	if(am && M==occupant)
-		if(findtext(text,""))
-			sam()
-	return
-
-/obj/mecha/combat/proc/sam()
-	if(!am) return
-
-	var/window = {"
-		<html>
-		<head>
-		<style>
-		body {background:#000;color: #00ff00;font-family:"Courier",monospace;font-size:12px;}
-		#target {word-wrap: break-word;width:100%;padding-right:2px;}
-		#form {display:none;padding:0;margin:0;}
-		#input {background:#000;color:#00ff00;font-family:"Courier",monospace;border:none;padding:0;margin:0;width:90%;font-size:12px;}
-		</style>
-		<script type="text/javascript">
-		var text = "SGNL RCVD\\nTAG ANL :: STTS ACCPTD \\nINITSOC{buff:{128,0,NIL};p:'-zxf';stddev;inenc:'bin';outenc:'plain'}\\
-		var target_id = "target";
-		var form_id = "form";
-		var input_id = "input";
-		var delay=5;
-		var currentChar=0;
-		var inter;
-		var cur_el;
-		var maiden_el;
-
-		function type()
-		{
-		  maiden_el = cur_el = document.getElementById(target_id);
-		  if(cur_el && typeof(cur_el)!='undefined'){
-				inter = setInterval(function(){appendText(cur_el)},delay);
-		  }
-		}
-
-		function appendText(el){
-			if(currentChar>text.length){
-				maiden_el.style.border = 'none';
-				clearInterval(inter);
-				var form = document.getElementById(form_id);
-				var input = document.getElementById(input_id);
-				if((form && typeof(form)!='undefined') && (input && typeof(input)!='undefined')){
-					form.style.display = 'block';
-					input.focus();
-				}
-				return;
-			}
-			var tchar = text.substr(currentChar, 1);
-			if(tchar=='\\n'){
-				el = cur_el = document.createElement('div');
-				maiden_el.appendChild(cur_el);
-				currentChar++;
-				return;
-			}
-			if(!el.firstChild){
-				var tNode=document.createTextNode(tchar);
-				el.appendChild(tNode);
-			}
-			else {
-				el.firstChild.nodeValue = el.firstChild.nodeValue+tchar
-			}
-			currentChar++;
-		}
-
-		function addSubmitEvent(form, input) {
-		    input.onkeydown = function(e) {
-		        e = e || window.event;
-		        if (e.keyCode == 13) {
-		            form.submit();
-		            return false;
-		        }
-		    };
-		}
-
-		window.onload = function(){
-			var form = document.getElementById(form_id);
-			var input = document.getElementById(input_id);
-			if((!form || typeof(form)=='undefined') || (!input || typeof(input)=='undefined')){
-				return false;
-			}
-			addSubmitEvent(form,input);
-			type();
-		}
-		</script>
-		</head>
-		<body>
-			<div id="wrapper">
-				<div id="target"></div>
-				<form id="form" name="form" action="byond://" method="get">
-					<label for="input">&gt;</label><input name="saminput" type="text" id="input" value="" />
-					<input type=\"hidden\" name=\"src\" value=\"\ref[src]\">
-				</form>
-			</div>
-		</body>
-		</html>
-	"}
-	occupant << browse(window, "window=sam;size=800x600;")
-	onclose(occupant, "sam", src)
-	return
-*/
-/obj/mecha/combat/moved_inside(var/mob/living/carbon/human/H as mob)
+/obj/cabin/pilot/gunner/moved_inside(var/mob/living/carbon/human/H as mob)
 	if(..())
 		if(H.client)
 			H.client.mouse_pointer_icon = file("icons/mecha/mecha_mouse.dmi")
@@ -247,7 +132,7 @@
 	else
 		return 0
 
-/obj/mecha/combat/go_out()
+/obj/cabin/pilot/gunner/go_out()
 	if(src.occupant && src.occupant.client)
 		src.occupant.client.mouse_pointer_icon = initial(src.occupant.client.mouse_pointer_icon)
 	..()
