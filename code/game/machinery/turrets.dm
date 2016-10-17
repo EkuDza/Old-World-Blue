@@ -17,8 +17,10 @@
 		turretTargets |= O
 	else if( istype(O, /obj/mecha) )
 		var/obj/mecha/Mech = O
-		if( Mech.occupant )
-			turretTargets |= Mech
+		for(var/obj/cabin/C in Mech)
+			if(C.occupant)
+				turretTargets |= Mech
+				break
 	else if(istype(O,/mob/living/simple_animal))
 		turretTargets |= O
 	return 1

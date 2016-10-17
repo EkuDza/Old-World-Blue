@@ -11,9 +11,10 @@
 			enemies -= L
 	else if(istype(A, /obj/mecha))
 		var/obj/mecha/M = A
-		if(M.occupant)
-			stance = HOSTILE_STANCE_ATTACK
-			return A
+		for(var/obj/cabin/C in M)
+			if(C.occupant)
+				stance = HOSTILE_STANCE_ATTACK
+				return A
 
 /mob/living/simple_animal/hostile/retaliate/ListTargets()
 	if(!enemies.len)
@@ -35,9 +36,10 @@
 				enemies |= M
 		else if(istype(A, /obj/mecha))
 			var/obj/mecha/M = A
-			if(M.occupant)
-				enemies |= M
-				enemies |= M.occupant
+			for(var/obj/cabin/C in M)
+				if(C.occupant)
+					enemies |= M
+					enemies |= C.occupant
 
 	for(var/mob/living/simple_animal/hostile/retaliate/H in around)
 		if(!attack_same && !H.attack_same && H.faction == faction)

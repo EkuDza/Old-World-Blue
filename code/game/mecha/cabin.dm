@@ -174,10 +174,7 @@
 /////////////////////////////////////
 
 /obj/cabin/proc/get_turf_air()
-	var/turf/T = get_turf(src)
-	if(T)
-		. = T.return_air()
-	return
+	return chasis.get_turf_air()
 
 /obj/cabin/remove_air(amount)
 	if(use_internal_tank)
@@ -191,7 +188,7 @@
 /obj/cabin/return_air()
 	if(use_internal_tank)
 		return chasis.cabin_air
-	return get_turf_air()
+	return ..()
 
 /obj/cabin/proc/return_pressure()
 	. = 0
@@ -346,7 +343,7 @@
 	if(mob_container.forceMove(chasis.loc))//ejecting mob container
 		if(src.occupant.client)
 			src.occupant.client.mouse_pointer_icon = initial(src.occupant.client.mouse_pointer_icon)
-		src.log_message("[mob_container] moved out.")
+		chais.log_message("[mob_container] moved out.")
 		occupant.reset_view()
 		src.occupant << browse(null, "window=exosuit")
 		if(istype(mob_container, /obj/item/device/mmi))

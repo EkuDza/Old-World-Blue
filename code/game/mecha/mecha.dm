@@ -778,6 +778,12 @@
 ////////  Atmospheric stuff  ////////
 /////////////////////////////////////
 
+/obj/mecah/proc/get_turf_air()
+	var/turf/T = get_turf(src)
+	if(T)
+	return T.return_air()
+
+
 /obj/mecha/proc/connect(obj/machinery/atmospherics/portables_connector/new_port)
 	//Make sure not already connected to something else
 	if(connected_port || !new_port || new_port.connected_device)
@@ -860,19 +866,6 @@
 	if(!C) return
 	src.log_message("[H] tries to move in [C].")
 	C.move_inside(H)
-
-
-/obj/mecha/verb/eject()
-	set name = "Eject"
-	set category = "Exosuit Interface"
-	set src = usr.loc
-	set popup_menu = 0
-	if(usr!=src.occupant)
-		return
-	usr.forceMove(src.loc)
-	add_fingerprint(usr)
-	return
-
 
 /////////////////////////
 ////// Access stuff /////

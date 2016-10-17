@@ -55,7 +55,7 @@
 	return
 
 /obj/mecha/combat/marauder/seraph/New()
-	max_equpi = 5
+	max_equip = 5
 	..()
 	attach(new /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/scattershot(src))
 	attach(new /obj/item/mecha_parts/mecha_equipment/weapon/ballistic/missile_rack/explosive(src))

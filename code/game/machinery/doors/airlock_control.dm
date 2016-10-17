@@ -116,10 +116,16 @@ obj/machinery/door/airlock/close(surpress_send)
 
 obj/machinery/door/airlock/Bumped(atom/AM)
 	..(AM)
-	if(istype(AM, /obj/mecha))
+	if(istype(AM, /obj/mecha)) //TODO: Mecha
 		var/obj/mecha/mecha = AM
-		if(density && radio_connection && mecha.occupant && (src.allowed(mecha.occupant) || src.check_access_list(mecha.operation_req_access)))
-			send_status(1)
+		if(density && radio_connection)
+			if(src.check_access_list(mecha.operation_req_access))
+				send_status(1)
+			else
+				for(var/obj/cabin/pilot/C in mecha.seats)
+					if(C.occupant && src.allowed(C.occupant))
+						send_status(1)
+						break
 	return
 
 obj/machinery/door/airlock/proc/set_frequency(new_frequency)

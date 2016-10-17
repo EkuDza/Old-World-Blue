@@ -45,10 +45,12 @@
 
 		else if(istype(A, /obj/mecha)) // Our line of sight stuff was already done in ListTargets().
 			var/obj/mecha/M = A
-			if (M.occupant)
-				stance = HOSTILE_STANCE_ATTACK
-				T = M
-				break
+			for(var/obj/cabin/C in M)
+				if (C.occupant)
+					stance = HOSTILE_STANCE_ATTACK
+					T = M
+					break
+			if(T == M) break
 
 		if(istype(A, /obj/machinery/bot))
 			var/obj/machinery/bot/B = A
