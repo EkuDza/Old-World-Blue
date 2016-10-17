@@ -82,9 +82,11 @@
 
 /obj/mecha/attackby(var/obj/item/weapon/W, var/mob/user)
 	if(istype(W, /obj/item/device/kit/paint))
+/* TODO: Mecha
 		if(occupant)
 			user << "You can't customize a mech while someone is piloting it - that would be unsafe!"
 			return
+*/
 
 		var/obj/item/device/kit/paint/P = W
 		var/found = null

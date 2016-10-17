@@ -41,9 +41,8 @@
 	var/lights_power = 6
 	var/force = 0
 
-	var/list/seats = list(
-		new/obj/cabin/pilot(src)
-	)
+	var/max_equip // Override for first seat
+	var/list/seats = list()
 
 	//inner atmos
 	var/internal_tank_valve = ONE_ATMOSPHERE
@@ -85,6 +84,7 @@
 	icon_state += "-open"
 	add_airtank()
 	add_cabin()
+	setup_seats()
 	spark_system.set_up(2, 0, src)
 	spark_system.attach(src)
 	add_cell()
@@ -189,6 +189,12 @@
 		"nitrogen", N2STANDARD*cabin_air.volume/(R_IDEAL_GAS_EQUATION*cabin_air.temperature)
 	)
 	return cabin_air
+
+/obj/mecha/proc/setup_seats()
+	for(var/obj/cabin/C in seats)
+		qdel(C)
+	seats += new/obj/cabin/pilot(src, max_equip)
+	return 1
 
 /obj/mecha/proc/add_iterators()
 	pr_int_temp_processor = new /datum/global_iterator/mecha_preserve_temp(list(src))
@@ -372,11 +378,13 @@
 			var/int_dam_flag = safepick(possible_int_damage)
 			if(int_dam_flag)
 				setInternalDamage(int_dam_flag)
+/*
 	if(prob(5))
 		if(ignore_threshold || src.health*100/initial(src.health)<src.internal_damage_threshold)
 			var/obj/item/mecha_parts/mecha_equipment/destr = safepick(equipment)
 			if(destr)
 				destr.destroy()
+*/
 	return
 
 /obj/mecha/proc/hasInternalDamage(int_dam_flag=null)
@@ -531,7 +539,7 @@
 			var/hit_occupant = 1 //only allow the occupant to be hit once
 			for(var/i in 1 to min(Proj.penetrating, round(Proj.damage/15)))
 				if(hit_occupant && prob(20))
-					var/obj/carbin/C = pick(seats)
+					var/obj/cabin/C = pick(seats)
 					if(C.occupant)
 						Proj.attack_mob(C.occupant, distance)
 					hit_occupant = 0
@@ -568,27 +576,7 @@
 				src.check_for_internal_damage(MECHA_INT_ALL,1)
 	return
 
-/*Will fix later -Sieve
-/obj/mecha/attack_blob(mob/user as mob)
-	src.log_message("Attack by blob. Attacker - [user].",1)
-	if(!prob(src.deflect_chance))
-		src.take_damage(6)
-		src.check_for_internal_damage(list(MECHA_INT_TEMP_CONTROL,MECHA_INT_TANK_BREACH,MECHA_INT_CONTROL_LOST))
-		playsound(src.loc, 'sound/effects/blobattack.ogg', 50, 1, -1)
-		user << "\red You smash at the armored suit!"
-		for (var/mob/V in viewers(src))
-			if(V.client && !(V.blinded))
-				V.show_message("\red The [user] smashes against [src.name]'s armor!", 1)
-	else
-		src.log_append_to_last("Armor saved.")
-		playsound(src.loc, 'sound/effects/blobattack.ogg', 50, 1, -1)
-		user << "\green Your attack had no effect!"
-		src.occupant_message("\blue The [user]'s attack is stopped by the armor.")
-		for (var/mob/V in viewers(src))
-			if(V.client && !(V.blinded))
-				V.show_message("\blue The [user] rebounds off the [src.name] armor!", 1)
-	return
-*/
+
 
 //TODO
 /obj/mecha/meteorhit()
@@ -623,6 +611,21 @@
 		src.take_damage(W.force,W.damtype)
 		src.check_for_internal_damage(list(MECHA_INT_TEMP_CONTROL,MECHA_INT_TANK_BREACH,MECHA_INT_CONTROL_LOST))
 	return
+
+/obj/mecha/proc/try_fix_control()
+	usr << sound('sound/mecha/UI_SCI-FI_Compute_01_Wet_stereo.wav',channel=4, volume=100);
+	var/T = src.loc
+	if(do_after(100))
+		if(T == src.loc)
+			src.clearInternalDamage(MECHA_INT_CONTROL_LOST)
+			usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_22_stereo_complite.wav',channel=4, volume=100);
+			occupant_message("<font color='blue'>Recalibration successful.</font>")
+			src.log_message("Recalibration of coordination system finished with 0 errors.")
+		else
+			usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_15_stereo_error.wav',channel=4, volume=100);
+			occupant_message("<font color='red'>Recalibration failed.</font>")
+			src.log_message("Recalibration of coordination system failed with 1 error.",1)
+
 
 //////////////////////
 ////// AttackBy //////
@@ -774,19 +777,6 @@
 /////////////////////////////////////
 ////////  Atmospheric stuff  ////////
 /////////////////////////////////////
-
-/obj/mecha/proc/try_connect()
-	var/obj/machinery/atmospherics/portables_connector/possible_port = locate(/obj/machinery/atmospherics/portables_connector/) in loc
-	if(possible_port)
-		if(connect(possible_port))
-			requester.occupant_message("\blue [name] connects to the port.")
-			return 1
-		else
-			requester.occupant_message("\red [name] failed to connect to the port.")
-			return
-	else
-		requester.occupant_message("Nothing happens")
-	return 0
 
 /obj/mecha/proc/connect(obj/machinery/atmospherics/portables_connector/new_port)
 	//Make sure not already connected to something else
@@ -940,9 +930,6 @@
 /obj/mecha/proc/get_stats_part()
 	var/integrity = health/initial(health)*100
 	var/cell_charge = get_charge()
-	var/tank_pressure = internal_tank ? round(internal_tank.return_pressure(),0.01) : "None"
-	var/tank_temperature = internal_tank ? internal_tank.return_temperature() : "Unknown"
-	var/cabin_pressure = round(return_pressure(),0.01)
 	var/output = {"
 		[report_internal_damage()]
 		[integrity<30?"<font color='red'><b>DAMAGE LEVEL CRITICAL</b></font><br>":null]

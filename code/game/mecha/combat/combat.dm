@@ -4,14 +4,14 @@
 	var/melee_can_hit = 1
 	var/list/destroyable_obj = list(/obj/mecha, /obj/structure/window, /obj/structure/grille, /turf/simulated/wall)
 	internal_damage_threshold = 50
-	seats = list(
-		new/obj/cabin/pilot/gunner(src)
-	)
 	maint_access = 0
 	//add_req_access = 0
 	//operation_req_access = list(access_hos)
 	damage_absorption = list("brute"=0.7,"fire"=1,"bullet"=0.7,"laser"=0.85,"energy"=1,"bomb"=0.8)
 	var/am = "d3c2fbcadca903a41161ccc9df9cf948"
+
+/obj/mecha/combat/setup_seats()
+	seats += new/obj/cabin/pilot/gunner(src, max_equip)
 
 /*
 /obj/mecha/combat/range_action(target as obj|mob|turf)
@@ -123,20 +123,6 @@
 			V.show_message("[src.name] shakes [M] like a rag doll.")
 	return
 */
-
-/obj/cabin/pilot/gunner/moved_inside(var/mob/living/carbon/human/H as mob)
-	if(..())
-		if(H.client)
-			H.client.mouse_pointer_icon = file("icons/mecha/mecha_mouse.dmi")
-		return 1
-	else
-		return 0
-
-/obj/cabin/pilot/gunner/go_out()
-	if(src.occupant && src.occupant.client)
-		src.occupant.client.mouse_pointer_icon = initial(src.occupant.client.mouse_pointer_icon)
-	..()
-	return
 
 /obj/mecha/combat/Topic(href,href_list)
 	..()

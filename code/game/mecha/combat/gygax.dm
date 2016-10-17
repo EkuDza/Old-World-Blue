@@ -14,7 +14,6 @@
 	var/overload_coeff = 2
 	wreckage = /obj/effect/decal/mecha_wreckage/gygax
 	internal_damage_threshold = 35
-	max_equip = 3
 
 /obj/mecha/combat/gygax/dark
 	desc = "A lightweight exosuit used by NanoTrasen Heavy Asset Protection. \

@@ -14,8 +14,15 @@
 	var/list/equipment = new
 	var/obj/item/mecha_parts/mecha_equipment/selected
 	var/max_equip = 3
+	var/mouse_pointer_icon
 
-/obj/cabin/New(var/atom/new_loc)
+/obj/cabin/pilot
+	name = "Pilot"
+
+/obj/cabin/pilot/gunner
+	mouse_pointer_icon = 'icons/mecha/mecha_mouse.dmi'
+
+/obj/cabin/New(var/atom/new_loc, var/override_max_equip)
 	..()
 	chasis = new_loc
 	if(!istype(chasis))
@@ -24,8 +31,12 @@
 
 	add_radio()
 
+	if(override_max_equip)
+		max_equip = override_max_equip
+
 /obj/cabin/Destroy()
 	go_out()
+	..()
 
 /obj/cabin/proc/Death(var/obj/effect/decal/mecha_wreckage/WR = null)
 	if(WR)
@@ -78,10 +89,12 @@
 	if(target == chasis) return 0
 	if(!chasis.can_operate()) return
 
+/*
 	if(chasis.hasInternalDamage(MECHA_INT_CONTROL_LOST))
 		target = safepick(view(3,target))
 		if(!target)
 			return
+*/
 
 	if(istype(target, /obj/machinery))
 		if (src.interface_action(target))
@@ -101,7 +114,7 @@
 
 /obj/cabin/proc/interface_action(obj/machinery/target)
 	if(istype(target, /obj/machinery/access_button))
-		chasis.occupant_message("<span class='notice'>Interfacing with [target].</span>")
+		occupant_message("<span class='notice'>Interfacing with [target].</span>")
 		chasis.log_message("Interfaced with [target].")
 		target.attack_hand(src.occupant)
 		return 1
@@ -117,7 +130,7 @@
 		if(src_object == chasis || (src_object in chasis))
 			return STATUS_INTERACTIVE
 		if(chasis.Adjacent(src_object))
-			chasis.occupant_message("<span class='notice'>Interfacing with [src_object]...</span>")
+			occupant_message("<span class='notice'>Interfacing with [src_object]...</span>")
 			chasis.log_message("Interfaced with [src_object].")
 			return STATUS_INTERACTIVE
 		if(src_object in view(2, chasis))
@@ -212,7 +225,17 @@
 	set popup_menu = 0
 	if(usr!=src.occupant)
 		return
-	chasis.try_connect()
+	var/obj/machinery/atmospherics/portables_connector/possible_port = locate() in chasis.loc
+	if(possible_port)
+		if(chasis.connect(possible_port))
+			occupant_message("\blue [name] connects to the port.")
+			return 1
+		else
+			occupant_message("\red [name] failed to connect to the port.")
+			return
+	else
+		occupant_message("Nothing happens")
+	return 0
 
 /obj/cabin/proc/disconnect_from_port()
 	set name = "Disconnect from port"
@@ -221,7 +244,7 @@
 	set popup_menu = 0
 	if(usr!=src.occupant)
 		return
-	disconnect(src)
+	chasis.disconnect(src)
 
 /obj/cabin/verb/toggle_lights()
 	set name = "Toggle Lights"
@@ -273,6 +296,8 @@
 
 /obj/cabin/proc/moved_inside(var/mob/living/carbon/human/H as mob)
 	if(H && H.client && H in range(1))
+		if(mouse_pointer_icon && H.client)
+			H.client.mouse_pointer_icon = mouse_pointer_icon
 		H.reset_view(src)
 		H.stop_pulling()
 		H.forceMove(src)
@@ -319,6 +344,8 @@
 	else
 		return
 	if(mob_container.forceMove(chasis.loc))//ejecting mob container
+		if(src.occupant.client)
+			src.occupant.client.mouse_pointer_icon = initial(src.occupant.client.mouse_pointer_icon)
 		src.log_message("[mob_container] moved out.")
 		occupant.reset_view()
 		src.occupant << browse(null, "window=exosuit")
@@ -386,6 +413,10 @@
 	var/output = chasis.get_stats_part()
 	if(return_pressure() > WARNING_HIGH_PRESSURE)
 		output += "<font color='red'><b>DANGEROUSLY HIGH CABIN PRESSURE</b></font><br />"
+
+	var/tank_pressure = chasis.internal_tank ? round(chasis.internal_tank.return_pressure(),0.01) : "None"
+	var/tank_temperature = chasis.internal_tank ? chasis.internal_tank.return_temperature() : "Unknown"
+	var/cabin_pressure = round(return_pressure(),0.01)
 	output += {"
 		<b>Air source: </b>[use_internal_tank?"Internal Airtank":"Environment"]<br>
 		<b>Airtank pressure: </b>[chasis.tank_pressure]kPa<br>
@@ -571,15 +602,4 @@
 	if(href_list["repair_int_control_lost"])
 		chasis.occupant_message("Recalibrating coordination system.")
 		src.log_message("Recalibration of coordination system started.")
-		usr << sound('sound/mecha/UI_SCI-FI_Compute_01_Wet_stereo.wav',channel=4, volume=100);
-		var/T = src.loc
-		if(do_after(100))
-			if(T == src.loc)
-				src.clearInternalDamage(MECHA_INT_CONTROL_LOST)
-				usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_22_stereo_complite.wav',channel=4, volume=100);
-				chasis.occupant_message("<font color='blue'>Recalibration successful.</font>")
-				src.log_message("Recalibration of coordination system finished with 0 errors.")
-			else
-				usr << sound('sound/mecha/UI_SCI-FI_Tone_Deep_Wet_15_stereo_error.wav',channel=4, volume=100);
-				chasis.occupant_message("<font color='red'>Recalibration failed.</font>")
-				src.log_message("Recalibration of coordination system failed with 1 error.",1)
+		chasis.try_fix_control()

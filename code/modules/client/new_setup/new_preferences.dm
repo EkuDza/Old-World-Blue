@@ -212,13 +212,31 @@
 	dat += "<span style='white-space: nowrap;'>[TextPreview(exploit_record,26)]</span>"
 
 	dat += "<br><br>"
-	dat += "<table style='position:relative; left:-3px'><tr><td>Need Glasses?<br>Coughing?<br>Nervousness?<br>Paraplegia?</td><td>"
-	dat += "<a href='byond://?src=\ref[src];disabilities=glasses'>[disabilities & NEARSIGHTED ? "Yes" : "No"]</a><br>"
-	dat += "<a href='byond://?src=\ref[src];disabilities=coughing'>[disabilities & COUGHING ? "Yes" : "No"]</a><br>"
-	dat += "<a href='byond://?src=\ref[src];disabilities=nervousness'>[disabilities & NERVOUS ? "Yes" : "No"]</a><br>"
-	dat += "<a href='byond://?src=\ref[src];disabilities=paraplegia'>[disabilities & PARAPLEGIA ? "Yes" : "No"]</a>"
-	dat += "</td></tr></table>"
+	dat += {"
+		<table style='position:relative; left:-3px'>
+		<tr><td>Underwear:</td>
+			<td><a href='byond://?src=\ref[src];preference=underwear'>[underwear]</a><br></td></tr>
+		<tr><td>Undershirt:</td>
+			<td><a href='byond://?src=\ref[src];preference=undershirt'>[undershirt]</a><br></td></tr>
+		<tr><td>Socks:</td>
+			<td><a href='byond://?src=\ref[src];preference=socks'>[socks]</a><br></td></tr>
+		<tr><td>Backpack Type:</td>
+			<td><a href ='byond://?src=\ref[src];preference=bag'>[backbaglist[backbag]]</a><br></td></tr>
+		</td></tr></table>
+	"}
 
+
+/*
+	dat += {"
+		<table style='position:relative; left:-3px'>
+		<tr><td>Need Glasses?<br>Coughing?<br>Nervousness?<br>Paraplegia?</td><td>"
+		<a href='byond://?src=\ref[src];disabilities=glasses'>[disabilities & NEARSIGHTED ? "Yes" : "No"]</a><br>
+		<a href='byond://?src=\ref[src];disabilities=coughing'>[disabilities & COUGHING ? "Yes" : "No"]</a><br>
+		<a href='byond://?src=\ref[src];disabilities=nervousness'>[disabilities & NERVOUS ? "Yes" : "No"]</a><br>
+		<a href='byond://?src=\ref[src];disabilities=paraplegia'>[disabilities & PARAPLEGIA ? "Yes" : "No"]</a>
+		</td></tr></table>
+	"}
+*/
 	dat += "</td></tr></table>"
 
 	return dat
