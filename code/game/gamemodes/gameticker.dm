@@ -40,9 +40,19 @@ var/list/donator_icons
 
 /datum/controller/gameticker/proc/pregame()
 	login_music = pick(
+		//New Year-New Year!
+		'sound/music/new_year/Christmas Is All Around Us.ogg',
+		'sound/music/new_year/Driving Home For Christmas.ogg',
+		'sound/music/new_year/Jingle Bell Rock.ogg',
+		'sound/music/new_year/Last Christmas.ogg',
+		'sound/music/new_year/Last Christmas Fem.ogg',
+		'sound/music/new_year/Let It Snow.ogg',
+		'sound/music/new_year/Magic Moments.ogg',
+		'sound/music/new_year/Ring Christmas Bells.ogg',)
 		/*'sound/music/halloween/skeletons.ogg',
 		'sound/music/halloween/halloween.ogg',
 		'sound/music/halloween/ghosts.ogg',*/
+/*
 		'sound/music/space.ogg',
 		'sound/music/traitor.ogg',
 		'sound/music/title2.ogg',
@@ -54,6 +64,7 @@ var/list/donator_icons
 		'sound/music/space_oddity.ogg',
 		'sound/music/Welcome_to_Lunar_Industries.ogg',
 		'sound/music/Mind_Heist.ogg')
+*/
 
 	donator_icons = icon_states('icons/donator.dmi')
 
@@ -265,15 +276,17 @@ var/list/donator_icons
 
 	proc/create_characters()
 		for(var/mob/new_player/player in player_list)
-			if(player && player.ready && player.mind)
-				if(player.mind.assigned_role=="AI")
-					player.close_spawn_windows()
-					player.AIize()
-				else if(!player.mind.assigned_role)
-					continue
-				else
-					player.create_character()
-					qdel(player)
+			if(player && player.ready && player.mind && player.mind.assigned_role)
+				switch(player.mind.assigned_role)
+					if("AI")
+						player.close_spawn_windows()
+						player.AIize(1)
+					if("Cyborg")
+						player.create_robot_character()
+						qdel(player)
+					else
+						player.create_character()
+						qdel(player)
 
 
 	proc/collect_minds()
@@ -283,20 +296,22 @@ var/list/donator_icons
 
 
 	proc/equip_characters()
-		var/captainless=1
-		for(var/mob/living/carbon/human/player in player_list)
+		var/captainless = 1
+		for(var/mob/living/player in player_list)
 			if(player && player.mind && player.mind.assigned_role)
-				if(player.mind.assigned_role == "Captain")
+				var/rang = player.mind.assigned_role
+				if(rang == "Captain")
 					captainless=0
 				if(!player_is_antag(player.mind, only_offstation_roles = 1))
-					job_master.EquipRank(player, player.mind.assigned_role, 0)
-					UpdateFactionList(player)
-					equip_custom_items(player)
+					job_master.EquipRank(player, rang)
+					job_master.MoveAtSpawnPoint(player, rang)
+					if(ishuman(player))
+						UpdateFactionList(player)
+						equip_custom_items(player)
 		if(captainless)
 			for(var/mob/M in player_list)
 				if(!istype(M,/mob/new_player))
 					M << "Captainship not forced on anyone."
-
 
 	proc/check_queue()
 		if(!queued_players.len || !config.hard_popcap)

@@ -377,7 +377,7 @@ var/mob/living/silicon/robot/global/list/redcode_robot_modules = list(
 /obj/item/weapon/robot_module/security
 	name = "security robot module"
 	channels = list("Security" = 1)
-	emotes = list(/datum/emote/law, /datum/emote/halt)
+	emotes = list(/datum/emote/special/law, /datum/emote/special/halt)
 	networks = list(NETWORK_SECURITY)
 	subsystems = list(/mob/living/silicon/proc/subsystem_crew_monitor)
 	can_be_pushed = 0
@@ -460,7 +460,7 @@ var/mob/living/silicon/robot/global/list/redcode_robot_modules = list(
 	..()
 	src.modules += new /obj/item/device/flash(src)
 	src.modules += new /obj/item/weapon/gripper/service(src)
-	src.modules += new /obj/item/weapon/reagent_containers/glass/bucket(src)
+	src.modules += new /obj/item/weapon/reagent_containers/glass/beaker/bucket(src)
 	src.modules += new /obj/item/weapon/material/minihoe(src)
 	src.modules += new /obj/item/weapon/material/hatchet(src)
 	src.modules += new /obj/item/device/analyzer/plant_analyzer(src)

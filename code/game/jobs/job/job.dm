@@ -78,6 +78,10 @@ For copy-pasting:
 	)
 */
 
+/datum/job/New()
+	..()
+	put_in_backpack += /obj/item/weapon/gift/new_year
+
 /datum/job/proc/equip(var/mob/living/carbon/human/H)
 	if(!H)	return 0
 
@@ -212,5 +216,8 @@ For copy-pasting:
 		for(var/obj/item/sub_item in item.contents)
 			apply_fingerprints_to_item(holder, sub_item)
 
-/datum/job/proc/is_position_available()
-	return (current_positions < total_positions) || (total_positions == -1)
+/datum/job/proc/is_position_available(var/latejoin = 0)
+	if(latejoin)
+		return (total_positions - current_positions) != 0
+	else
+		return (spawn_positions - current_positions) != 0
