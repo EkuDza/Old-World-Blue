@@ -1138,6 +1138,9 @@
 			vessel.maximum_volume = species.blood_volume
 		fixblood()
 
+	if (species.ability_datum)
+		species_abilities = new species.ability_datum
+
 	// Rebuild the HUD. If they aren't logged in then login() should reinstantiate it for them.
 	if(client && client.screen)
 		client.screen.Cut()
